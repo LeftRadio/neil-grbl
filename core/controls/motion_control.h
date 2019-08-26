@@ -22,6 +22,7 @@
 #ifndef motion_control_h
 #define motion_control_h
 
+#include "grbl.h"
 
 // System motion commands must have a line number of zero.
 #define HOMING_CYCLE_LINE_NUMBER 0

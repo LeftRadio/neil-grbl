@@ -27,7 +27,7 @@
 
 #ifndef config_h
 #define config_h
-#include "grbl.h" // For Arduino IDE compatibility.
+// #include "grbl.h" // For Arduino IDE compatibility.
 
 
 // Define CPU pin map and default settings.
@@ -35,7 +35,8 @@
 // one configuration file by placing their specific defaults and pin map at the bottom of this file.
 // If doing so, simply comment out these two defines and see instructions below.
 #define DEFAULTS_GENERIC
-#define CPU_MAP_ATMEGA328P // Arduino Uno CPU
+
+#define F_CPU 48000000
 
 // Serial baud rate
 // #define BAUD_RATE 230400
@@ -145,23 +146,6 @@
 #define N_DECIMAL_RATEVALUE_MM    0 // Rate or velocity value in mm/min
 #define N_DECIMAL_SETTINGVALUE    3 // Decimals for floating point setting values
 #define N_DECIMAL_RPMVALUE        0 // RPM value in rotations per min.
-
-/* Define Adaptive Multi-Axis Step-Smoothing(AMASS) levels and cutoff frequencies. The highest level
-   frequency bin starts at 0Hz and ends at its cutoff frequency. The next lower level frequency bin
-   starts at the next higher cutoff frequency, and so on. The cutoff frequencies for each level must
-   be considered carefully against how much it over-drives the stepper ISR, the accuracy of the 16-bit
-   timer, and the CPU overhead. Level 0 (no AMASS, normal operation) frequency bin starts at the
-   Level 1 cutoff frequency and up to as fast as the CPU allows (over 30kHz in limited testing).
-   NOTE: AMASS cutoff frequency multiplied by ISR overdrive factor must not exceed maximum step frequency.
-   NOTE: Current settings are set to overdrive the ISR to no more than 16kHz, balancing CPU overhead
-   and timer accuracy.  Do not alter these settings unless you know what you are doing. */
-#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-  #define MAX_AMASS_LEVEL 3
-  /* AMASS_LEVEL0: Normal operation, no upper cutoff frequency */
-  #define AMASS_LEVEL1 (F_CPU/8000)
-  #define AMASS_LEVEL2 (F_CPU/4000)
-  #define AMASS_LEVEL3 (F_CPU/2000)
-#endif
 
 // If your machine has two limits switches wired in parallel to one axis, you will need to enable
 // this feature. Since the two switches are sharing a single pin, there is no way for Grbl to tell
@@ -319,6 +303,23 @@
 // noise and shake your machine. At even lower step frequencies, AMASS adapts and provides even better
 // step smoothing. See stepper.c for more details on the AMASS system works.
 #define ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING  // Default enabled. Comment to disable.
+
+/* Define Adaptive Multi-Axis Step-Smoothing(AMASS) levels and cutoff frequencies. The highest level
+   frequency bin starts at 0Hz and ends at its cutoff frequency. The next lower level frequency bin
+   starts at the next higher cutoff frequency, and so on. The cutoff frequencies for each level must
+   be considered carefully against how much it over-drives the stepper ISR, the accuracy of the 16-bit
+   timer, and the CPU overhead. Level 0 (no AMASS, normal operation) frequency bin starts at the
+   Level 1 cutoff frequency and up to as fast as the CPU allows (over 30kHz in limited testing).
+   NOTE: AMASS cutoff frequency multiplied by ISR overdrive factor must not exceed maximum step frequency.
+   NOTE: Current settings are set to overdrive the ISR to no more than 16kHz, balancing CPU overhead
+   and timer accuracy.  Do not alter these settings unless you know what you are doing. */
+#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+  #define MAX_AMASS_LEVEL 3
+  /* AMASS_LEVEL0: Normal operation, no upper cutoff frequency */
+  #define AMASS_LEVEL1 (F_CPU/8000)
+  #define AMASS_LEVEL2 (F_CPU/4000)
+  #define AMASS_LEVEL3 (F_CPU/2000)
+#endif
 
 // Sets the maximum step rate allowed to be written as a Grbl setting. This option enables an error
 // check in the settings module to prevent settings values that will exceed this limitation. The maximum

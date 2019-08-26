@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    print.h
+  * @file    jog.h
   * @author  leftradio
   * @version 1.0.0
   * @date
@@ -9,30 +9,26 @@
 **/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __GRBL_PRINT_CONSOLE_H
-#define __GRBL_PRINT_CONSOLE_H
+#ifndef __GRBL_JOG_H
+#define __GRBL_JOG_H
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
+#include "planner.h"
+#include "gcode.h"
 
 /* Exported define -----------------------------------------------------------*/
+/* system motion line numbers must be zero */
+#define JOG_LINE_NUMBER 0
+
 /* Exported macro ------------------------------------------------------------*/
 /* Exported typedef ----------------------------------------------------------*/
 /* Exported variables --------------------------------------------------------*/
 /* Exported function ---------------------------------------------------------*/
-extern void printString(const char *s);
-extern void printPgmString(const char *s);
-extern void printInteger(int64_t n);
-extern void print_uint32_base10(uint32_t n);
-extern void print_uint8_base10(uint8_t n);
-extern void print_uint8_base2_ndigit(uint8_t n, uint8_t digits);
-extern void printFloat(float n, uint8_t decimal_places);
-extern void printFloat_CoordValue(float n);
-extern void printFloat_RateValue(float n);
-extern void printFreeMemory();
+extern uint8_t jog_execute(plan_line_data_t *pl_data, parser_block_t *gc_block);
 
 
-#endif /* __GRBL_PRINT_CONSOLE_H */
+#endif /* __GRBL_JOG_H */
 /******************************************************************************
       END FILE
 ******************************************************************************/

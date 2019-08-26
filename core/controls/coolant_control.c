@@ -43,22 +43,26 @@ uint8_t coolant_get_state(void) {
     uint8_t flood_port_val = grbl_hal_gpio_get_port(COOLANT_FLOOD_PORT, (1 << COOLANT_FLOOD_BIT));
     uint8_t mist_port_val = grbl_hal_gpio_get_port(COOLANT_MIST_PORT, (1 << COOLANT_MIST_BIT));
 
+    /* */
     #ifdef INVERT_COOLANT_FLOOD_PIN
-      if ( bit_isfalse(flood_port_val) ) {
+      /* */
+      if ( flood_port_val ) {
     #else
-      if ( bit_istrue(flood_port_val) ) {
+      if ( flood_port_val ) {
     #endif
       cl_state |= COOLANT_STATE_FLOOD;
     }
     #ifdef ENABLE_M7
+      /* */
       #ifdef INVERT_COOLANT_MIST_PIN
-        if (bit_isfalse(mist_port_val)) {
+        if ( mist_port_val) {
       #else
-        if (bit_istrue(mist_port_val)) {
+        if ( mist_port_val ) {
       #endif
         cl_state |= COOLANT_STATE_MIST;
       }
     #endif
+    /* */
     return cl_state;
 }
 
@@ -69,8 +73,6 @@ uint8_t coolant_get_state(void) {
   * @retval None
   */
 void coolant_stop(void) {
-    /* */
-    uint8_t rval = grbl_hal_gpio_get_port(COOLANT_FLOOD_PORT, (1 << COOLANT_FLOOD_BIT));
     /* */
     #ifdef INVERT_COOLANT_FLOOD_PIN
       grbl_hal_gpio_set_port(COOLANT_FLOOD_PORT, 0xFF, (1 << COOLANT_FLOOD_BIT));

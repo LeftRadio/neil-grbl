@@ -193,7 +193,7 @@ uint8_t system_execute_line(char *line)
           } else { return(STATUS_INVALID_STATEMENT); }
           if (!sys.abort) {  // Execute startup scripts after successful homing.
             sys.state = STATE_IDLE; // Set to IDLE when complete.
-            st_go_idle(); // Set steppers to the settings idle state before returning.
+            stepper_go_idle(); // Set steppers to the settings idle state before returning.
             if (line[2] == 0) { system_execute_startup(line); }
           }
           break;
@@ -353,57 +353,49 @@ uint8_t system_check_travel_limits(float *target)
 
 // Special handlers for setting and clearing Grbl's real-time execution flags.
 void system_set_exec_state_flag(uint8_t mask) {
-  uint8_t sreg = SREG;
-  cli();
-  sys_rt_exec_state |= (mask);
-  SREG = sreg;
+    grbl_hal_disable_interrupts();
+    sys_rt_exec_state |= (mask);
+    grbl_hal_enable_interrupts();
 }
 
 void system_clear_exec_state_flag(uint8_t mask) {
-  uint8_t sreg = SREG;
-  cli();
-  sys_rt_exec_state &= ~(mask);
-  SREG = sreg;
+    grbl_hal_disable_interrupts();
+    sys_rt_exec_state &= ~(mask);
+    grbl_hal_enable_interrupts();
 }
 
 void system_set_exec_alarm(uint8_t code) {
-  uint8_t sreg = SREG;
-  cli();
-  sys_rt_exec_alarm = code;
-  SREG = sreg;
+    grbl_hal_disable_interrupts();
+    sys_rt_exec_alarm = code;
+    grbl_hal_enable_interrupts();
 }
 
 void system_clear_exec_alarm() {
-  uint8_t sreg = SREG;
-  cli();
-  sys_rt_exec_alarm = 0;
-  SREG = sreg;
+    grbl_hal_disable_interrupts();
+    sys_rt_exec_alarm = 0;
+    grbl_hal_enable_interrupts();
 }
 
 void system_set_exec_motion_override_flag(uint8_t mask) {
-  uint8_t sreg = SREG;
-  cli();
-  sys_rt_exec_motion_override |= (mask);
-  SREG = sreg;
+    grbl_hal_disable_interrupts();
+    sys_rt_exec_motion_override |= (mask);
+    grbl_hal_enable_interrupts();
 }
 
 void system_set_exec_accessory_override_flag(uint8_t mask) {
-  uint8_t sreg = SREG;
-  cli();
-  sys_rt_exec_accessory_override |= (mask);
-  SREG = sreg;
+    grbl_hal_disable_interrupts();
+    sys_rt_exec_accessory_override |= (mask);
+    grbl_hal_enable_interrupts();
 }
 
 void system_clear_exec_motion_overrides() {
-  uint8_t sreg = SREG;
-  cli();
-  sys_rt_exec_motion_override = 0;
-  SREG = sreg;
+    grbl_hal_disable_interrupts();
+    sys_rt_exec_motion_override = 0;
+    grbl_hal_enable_interrupts();
 }
 
 void system_clear_exec_accessory_overrides() {
-  uint8_t sreg = SREG;
-  cli();
-  sys_rt_exec_accessory_override = 0;
-  SREG = sreg;
+    grbl_hal_disable_interrupts();
+    sys_rt_exec_accessory_override = 0;
+    grbl_hal_enable_interrupts();
 }

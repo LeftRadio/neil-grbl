@@ -382,7 +382,7 @@ void mc_reset()
       if (sys.state == STATE_HOMING) {
         if (!sys_rt_exec_alarm) {system_set_exec_alarm(EXEC_ALARM_HOMING_FAIL_RESET); }
       } else { system_set_exec_alarm(EXEC_ALARM_ABORT_CYCLE); }
-      st_go_idle(); // Force kill steppers. Position has likely been lost.
+      stepper_go_idle(); // Force kill steppers. Position has likely been lost.
     }
   }
 }

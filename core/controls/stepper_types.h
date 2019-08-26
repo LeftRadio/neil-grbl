@@ -67,9 +67,9 @@ typedef struct _segment_t {
    the planner, where the remaining planner block steps still can. */
 typedef struct _segments_buf_t {
     segment_t buffer[STEPPER_SEGMENT_BUFFER_SIZE];
-    uint8_t segment_buffer_head;
-    uint8_t segment_next_head;
-    volatile uint8_t segment_buffer_tail;
+    uint8_t head;
+    uint8_t next_head;
+    volatile uint8_t tail;
 } segments_t;
 
 /* Stepper data struct. Contains the running data for the main stepper ISR */

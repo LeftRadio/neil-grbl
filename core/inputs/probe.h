@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    print.h
+  * @file    probe.h
   * @author  leftradio
   * @version 1.0.0
   * @date
@@ -9,30 +9,28 @@
 **/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __GRBL_PRINT_CONSOLE_H
-#define __GRBL_PRINT_CONSOLE_H
+#ifndef __GRBL_PROBE_H
+#define __GRBL_PROBE_H
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 
 /* Exported define -----------------------------------------------------------*/
+// Values that define the probing state machine.
+#define PROBE_OFF     0 // Probing disabled or not in use. (Must be zero.)
+#define PROBE_ACTIVE  1 // Actively watching the input pin.
+
 /* Exported macro ------------------------------------------------------------*/
 /* Exported typedef ----------------------------------------------------------*/
 /* Exported variables --------------------------------------------------------*/
 /* Exported function ---------------------------------------------------------*/
-extern void printString(const char *s);
-extern void printPgmString(const char *s);
-extern void printInteger(int64_t n);
-extern void print_uint32_base10(uint32_t n);
-extern void print_uint8_base10(uint8_t n);
-extern void print_uint8_base2_ndigit(uint8_t n, uint8_t digits);
-extern void printFloat(float n, uint8_t decimal_places);
-extern void printFloat_CoordValue(float n);
-extern void printFloat_RateValue(float n);
-extern void printFreeMemory();
+extern void probe_init(void);
+extern void probe_configure_invert_mask(uint8_t is_probe_away);
+extern uint8_t probe_get_state(void);
+extern void probe_state_monitor(void);
 
 
-#endif /* __GRBL_PRINT_CONSOLE_H */
+#endif /* __GRBL_PROBE_H */
 /******************************************************************************
       END FILE
 ******************************************************************************/

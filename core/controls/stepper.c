@@ -50,11 +50,22 @@
 #include "stepper.h"
 #include "stepper_types.h"
 #include "config.h"
-#include "grbl.h"
 #include "hal_abstract.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+/* some constants */
+#define DT_SEGMENT (1.0f/(ACCELERATION_TICKS_PER_SECOND*60.0f)) // min/segment
+#define REQ_MM_INCREMENT_SCALAR 1.25f
+#define RAMP_ACCEL 0
+#define RAMP_CRUISE 1
+#define RAMP_DECEL 2
+#define RAMP_DECEL_OVERRIDE 3
+#define PREP_FLAG_RECALCULATE bit(0)
+#define PREP_FLAG_HOLD_PARTIAL_BLOCK bit(1)
+#define PREP_FLAG_PARKING bit(2)
+#define PREP_FLAG_DECEL_OVERRIDE bit(3)
+
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* */
@@ -75,8 +86,8 @@ static st_prep_t prep;
 static void _st_step_dir_bits_reset(void) {
     stepper.step_outbits = 0;
     stepper.dir_outbits = 0;
-    grbl_hal_stepper_gpio_set_port( STEP_PORT, STEP_MASK, stepper.step_outbits );
-    grbl_hal_stepper_gpio_set_port( DIRECTION_PORT, STEP_MASK, stepper.dir_outbits );
+    grbl_hal_gpio_set_port(STEP_PORT, STEP_MASK, stepper.step_outbits);
+    grbl_hal_gpio_set_port(DIRECTION_PORT, DIRECTION_MASK, stepper.dir_outbits);
 }
 
 /**
@@ -101,7 +112,8 @@ static __inline uint8_t st_next_block_index(uint8_t block_index) {
   */
 void stepper_init(void) {
     /* Init GPIO for ENABLE, DIRECTION, STEP signals for all stepper drivers */
-    grbl_hal_stepper_gpio_init();
+    grbl_hal_gpio_init(STEP_PORT, PULL_NONE);
+    grbl_hal_gpio_init(DIRECTION_PORT, PULL_NONE);
     /* Init two timers:
        1 - base timer with 33.3usec period
        2 - pulse width timer with (settings.pulse_microseconds) period (default 10usec)
@@ -185,10 +197,10 @@ void stepper_go_idle(void) {
   */
 void stepper_reset(void) {
     /* Initialize stepper driver idle state */
-    st_go_idle();
+    stepper_go_idle();
     /* Initialize stepper algorithm variables */
     memset(&prep, 0, sizeof(st_prep_t));
-    memset(&st, 0, sizeof(stepper_t));
+    memset(&stepper, 0, sizeof(stepper_t));
     stepper.exec_segment = NULL;
     /* Planner block pointer used by segment buffer */
     st_blocks.pl_block = NULL;
@@ -582,7 +594,7 @@ void stepper_prep_buffer(void) {
     float inv_rate = dt/(last_n_steps_remaining - step_dist_remaining); // Compute adjusted step rate inverse
 
     // Compute CPU cycles per step for the prepped segment.
-    uint32_t cycles = ceil( (TICKS_PER_MICROSECOND*1000000*60)*inv_rate ); // (cycles/step)
+    uint32_t cycles = (uint32_t) ceil( ((uint64_t)TICKS_PER_MICROSECOND * 1000000L * 60L) * inv_rate ); // (cycles/step)
 
     #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
       // Compute step timing and multi-axis smoothing level.
@@ -771,14 +783,14 @@ void grbl_stepper_timer_base_irq_callback(void) {
     // grbl_hal_stepper_timer_base_stop();
 
     /* Set the direction pins a couple of nanoseconds before we step the steppers */
-    DIRECTION_PORT->ODR = ((DIRECTION_PORT->ODR & ~DIRECTION_MASK) | (stepper.dir_outbits & DIRECTION_MASK));
+    grbl_hal_gpio_set_port(DIRECTION_PORT, DIRECTION_MASK, stepper.dir_outbits);
 
     /* pulse the stepping pins */
     #ifdef STEP_PULSE_DELAY
       /* store out_bits to prevent overwriting */
       stepper.step_delay_bits = stepper.step_outbits;
     #else
-      grbl_hal_stepper_gpio_set_port(STEP_PORT, STEP_MASK, stepper.step_outbits);
+      grbl_hal_gpio_set_port(STEP_PORT, STEP_MASK, stepper.step_outbits);
     #endif
 
     /* Enable step pulse reset timer so that stepper port reset interrupt can reset the signal after
@@ -813,7 +825,7 @@ void grbl_stepper_timer_base_irq_callback(void) {
                 /* initialize Bresenham line and distance counters */
                 stepper.counter_x = stepper.counter_y = stepper.counter_z = (stepper.exec_block->step_event_count >> 1);
             }
-            stepper.dir_outbits = stepper.exec_block->direction_bits ^ dir_port_invert_mask;
+            stepper.dir_outbits = stepper.exec_block->direction_bits;
 
             /* With AMASS enabled, adjust Bresenham axis increment counters according to AMASS level */
             #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
@@ -829,13 +841,13 @@ void grbl_stepper_timer_base_irq_callback(void) {
         }
         else {
             /* segment buffer empty, shutdown */
-            st_go_idle();
+            stepper_go_idle();
             #ifdef VARIABLE_SPINDLE
               /* ensure pwm is set properly upon completion of rate-controlled motion */
               if (stepper.exec_block->is_pwm_rate_adjusted) { spindle_set_speed(SPINDLE_PWM_OFF_VALUE); }
             #endif
             /* send to main program for cycle end */
-            system_et_exec_state_flag(EXEC_CYCLE_STOP);
+            system_set_exec_state_flag(EXEC_CYCLE_STOP);
             /* nothing to do, exit */
             return;
         }
@@ -901,7 +913,7 @@ void grbl_stepper_timer_base_irq_callback(void) {
   */
 void grbl_stepper_timer_pulse_irq_callback(void) {
     /* reset step/dir pulse cycle */
-    grbl_hal_stepper_gpio_set_port(STEP_PORT, STEP_MASK, (uint32_t)0);
+    grbl_hal_gpio_set_port(STEP_PORT, STEP_MASK, (uint32_t)0);
 }
 
 #ifdef STEP_PULSE_DELAY

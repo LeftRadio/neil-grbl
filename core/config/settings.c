@@ -20,10 +20,11 @@
 */
 
 #include "grbl.h"
+#include "settings.h"
 
 settings_t settings;
 
-const __flash settings_t defaults = {\
+const settings_t defaults = {\
     .pulse_microseconds = DEFAULT_STEP_PULSE_MICROSECONDS,
     .stepper_idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME,
     // .step_invert_mask = DEFAULT_STEPPING_INVERT_MASK,

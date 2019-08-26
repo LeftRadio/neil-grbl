@@ -10,6 +10,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "grbl.h"
+#include "hal_abstract.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -39,11 +40,11 @@ volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bit
   * @param  None
   * @retval None
   */
-void grbl_init(void) {  
+void grbl_init(void) {
     /*
       Initialize system upon power-up.
     */
-    
+
     grbl_hal_disable_interrupts();
 
     /* Setup serial baud rate and interrupts */
@@ -92,7 +93,7 @@ void grbl_init(void) {
 void grbl_main_loop(void) {
     /* Grbl initialization loop upon power-up or a system abort. For the latter, all processes
        will return to this loop to be cleanly re-initialized. */
-    
+
     /* Reset system variables. */
     uint8_t prior_state = sys.state;
     /* Clear system struct variable. */
@@ -116,7 +117,7 @@ void grbl_main_loop(void) {
     limits_init();
     probe_init();
     plan_reset(); // Clear block buffer and planner variables
-    st_reset(); // Clear stepper subsystem variables.
+    stepper_reset(); // Clear stepper subsystem variables.
 
     /* Sync cleared gcode and planner positions to current system position. */
     plan_sync_position();

@@ -37,25 +37,25 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
-coolant_control.c \
-gcode.c \
 grbl.c \
-jog.c \
-limits.c \
-motion_control.c \
-nuts_bolts.c \
-planner.c \
-probe.c \
-protocol.c \
-report.c \
-spindle_control.c \
-system.c \
 config/settings.c \
-eeprom/eeprom.c \
 hal_abstract/hal_abstract.c \
+system/gcode.c \
+system/jog.c \
+system/planner.c \
+system/protocol.c \
+system/system.c \
 serial/print.c \
+serial/report.c \
 serial/serial.c \
-stepper/stepper.c \
+controls/coolant_control.c \
+controls/motion_control.c \
+controls/spindle_control.c \
+controls/stepper.c \
+eeprom/eeprom.c \
+inputs/limits.c \
+inputs/probe.c \
+misc/nuts_bolts.c \
 
 # ASM sources
 ASM_SOURCES =  \
@@ -108,15 +108,19 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -I. \
+-Iserial \
 -Iconfig \
+-Icontrols \
 -Ieeprom \
 -Ihal_abstract \
--Iserial \
--Istepper \
+-Iinputs \
+-Imisc \
+-Isystem \
 
 # compile gcc flags
-ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
-CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -g -Wall -fdata-sections -ffunction-sections -fno-strict-aliasing
+PEDANTIC = -pedantic
+ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(PEDANTIC)
+CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -g -Wall -fdata-sections -ffunction-sections -fno-strict-aliasing $(PEDANTIC)
 
 #######################################
 # LDFLAGS

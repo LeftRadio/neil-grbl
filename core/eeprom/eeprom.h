@@ -9,8 +9,8 @@
 **/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __EEPROM__H
-#define __EEPROM__H
+#ifndef __GRBL_EEPROM__H
+#define __GRBL_EEPROM__H
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
@@ -20,8 +20,8 @@
 /* Exported typedef ----------------------------------------------------------*/
 /* Exported variables --------------------------------------------------------*/
 /* Exported function ---------------------------------------------------------*/
-//extern unsigned char eeprom_get_char(unsigned int addr);
-//extern void eeprom_put_char(unsigned int addr, unsigned char new_value);
+extern uint8_t eeprom_get_char(uint16_t addr);
+extern void eeprom_put_char(uint16_t addr, uint8_t new_value);
 extern void memcpy_to_eeprom_with_checksum(unsigned int destination, char *source, unsigned int size);
 extern int memcpy_from_eeprom_with_checksum(char *destination, unsigned int source, unsigned int size);
 

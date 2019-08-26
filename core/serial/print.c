@@ -1,51 +1,51 @@
 /*
-  print.c - Functions for formatting output strings
-  Part of Grbl
+  ******************************************************************************
+  * @file     print.c
+  * @author   leftradio
+  * @version  1.0.0
+  * @date
+  * @brief
+  ******************************************************************************
+**/
 
-  Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
-  Copyright (c) 2009-2011 Simen Svale Skogsrud
-
-  Grbl is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  Grbl is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
+/* Includes ------------------------------------------------------------------*/
 #include "grbl.h"
+#include "print.h"
+#include "hal_abstract.h"
 
+/* Private typedef -----------------------------------------------------------*/
+/* Private define ------------------------------------------------------------*/
+/* Private macro -------------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/
+/* Private function prototypes -----------------------------------------------*/
+/* Extern function -----------------------------------------------------------*/
+/* Private Functions ---------------------------------------------------------*/
+/* Exported Functions --------------------------------------------------------*/
 
-//
+/**
+  * @brief  printString
+  * @param  const char *s
+  * @retval None
+  */
 void printString(const char *s) {
     while (*s) {
         serial_write(*s++);
     }
 }
 
-// Print a string stored in PGM-memory
-void printPgmString(const char *s) {
-    char c;
-    while ((c = pgm_read_byte_near(s++))) {
-        serial_write(c);
-    }
-}
-
-// Prints an uint8 variable in base 10.
+/**
+  * @brief  Prints an uint8 variable in base 10.
+  * @param  uint8_t number value
+  * @retval None
+  */
 void print_uint8_base10(uint8_t n) {
     uint8_t digit_a = 0;
     uint8_t digit_b = 0;
-    if (n >= 100) { // 100-255
+    if (n >= 100) {
         digit_a = '0' + n % 10;
         n /= 10;
     }
-    if (n >= 10) { // 10-99
+    if (n >= 10) {
         digit_b = '0' + n % 10;
         n /= 10;
     }
@@ -54,7 +54,11 @@ void print_uint8_base10(uint8_t n) {
     if (digit_a) { serial_write(digit_a); }
 }
 
-// Prints an uint8 variable in base 2 with desired number of desired digits.
+/**
+  * @brief  Prints an uint8 variable in base 2 with desired number of desired digits.
+  * @param  uint8_t number value, uint8_t digits
+  * @retval None
+  */
 void print_uint8_base2_ndigit(uint8_t n, uint8_t digits) {
     unsigned char buf[digits];
     uint8_t i = 0;
@@ -68,7 +72,11 @@ void print_uint8_base2_ndigit(uint8_t n, uint8_t digits) {
     }
 }
 
-//
+/**
+  * @brief  print_uint32_base10
+  * @param  uint32_t n
+  * @retval None
+  */
 void print_uint32_base10(uint32_t n) {
     if (n == 0) {
         serial_write('0');
@@ -88,22 +96,30 @@ void print_uint32_base10(uint32_t n) {
     }
 }
 
-//
-void printInteger(long n) {
+/**
+  * @brief  printInteger
+  * @param  int64_t n
+  * @retval None
+  */
+void printInteger(int64_t n) {
     if (n < 0) {
         serial_write('-');
-        print_uint32_base10(-n);
+        print_uint32_base10( (uint32_t)(-n) );
     }
     else {
-        print_uint32_base10(n);
+        print_uint32_base10( (uint32_t)n );
     }
 }
 
-// Convert float to string by immediately converting to a long integer, which contains
-// more digits than a float. Number of decimal places, which are tracked by a counter,
-// may be set by the user. The integer is then efficiently converted to a string.
-// NOTE: AVR '%' and '/' integer operations are very efficient. Bitshifting speed-up
-// techniques are actually just slightly slower. Found this out the hard way.
+/**
+  * @brief  Convert float to string by immediately converting to a long integer, which contains
+            more digits than a float. Number of decimal places, which are tracked by a counter,
+            may be set by the user. The integer is then efficiently converted to a string.
+            NOTE: AVR '%' and '/' integer operations are very efficient. Bitshifting speed-up
+            techniques are actually just slightly slower. Found this out the hard way.
+  * @param  float n, uint8_t decimal_places
+  * @retval None
+  */
 void printFloat(float n, uint8_t decimal_places) {
     if (n < 0) {
         serial_write('-');
@@ -139,26 +155,38 @@ void printFloat(float n, uint8_t decimal_places) {
     }
 }
 
-// Floating value printing handlers for special variables types used in Grbl and are defined
-// in the config.h.
-//  - CoordValue: Handles all position or coordinate values in inches or mm reporting.
-//  - RateValue: Handles feed rate and current velocity in inches or mm reporting.
+/**
+  * @brief  Floating value printing handlers for special variables types used in Grbl and are defined
+            in the config.h.
+             - CoordValue: Handles all position or coordinate values in inches or mm reporting.
+             - RateValue: Handles feed rate and current velocity in inches or mm reporting.
+  * @param  float n
+  * @retval None
+  */
 void printFloat_CoordValue(float n) {
-  if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) {
-      printFloat(n*INCH_PER_MM,N_DECIMAL_COORDVALUE_INCH);
-  }
-  else {
-      printFloat(n,N_DECIMAL_COORDVALUE_MM);
-  }
+    if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) {
+        printFloat(n*INCH_PER_MM,N_DECIMAL_COORDVALUE_INCH);
+    }
+    else {
+        printFloat(n,N_DECIMAL_COORDVALUE_MM);
+    }
 }
 
-//
+/**
+  * @brief  Debug tool to print free memory in bytes at the called point. Not used otherwise
+  * @param  float n
+  * @retval None
+  */
 void printFloat_RateValue(float n) {
-  if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) {
-      printFloat(n*INCH_PER_MM,N_DECIMAL_RATEVALUE_INCH);
-  }
-  else {
-      printFloat(n,N_DECIMAL_RATEVALUE_MM);
-  }
+    if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) {
+        printFloat(n*INCH_PER_MM,N_DECIMAL_RATEVALUE_INCH);
+    }
+    else {
+        printFloat(n,N_DECIMAL_RATEVALUE_MM);
+    }
 }
 
+
+/******************************************************************************
+      END FILE
+******************************************************************************/

@@ -39,9 +39,9 @@
 void limits_init(void) {
     /* init limits gpio as input pins */
     #ifdef DISABLE_LIMIT_PIN_PULL_UP
-      grbl_hal_limits_gpio_init(IN_PULL_UP);
+      grbl_hal_gpio_init(LIMIT_PORT, PULL_DOWN);
     #else
-      grbl_hal_limits_gpio_init(IN_PULL_DOWN);
+      grbl_hal_gpio_init(LIMIT_PORT, PULL_UP);
     #endif
     /* */
     limits_state( bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE) );

@@ -31,7 +31,7 @@ typedef enum {
 	SPINDLE_PWM_PORT
 } grbl_hal_port_t;
 
-typedef enum { IN_PULL_UP, IN_PULL_DOWN } grbl_pin_pull_t;
+typedef enum { PULL_NONE, PULL_UP, PULL_DOWN } grbl_pin_pull_t;
 typedef enum { DEFAULT, PUSH_PULL, OPEN_DRAIN, IN_IRQ_ENABLE, IN_IRQ_DISABLE } grbl_pin_irq_state_t;
 
 /* Exported variables --------------------------------------------------------*/
@@ -68,11 +68,13 @@ extern void grbl_hal_serial_rx_callback(uint8_t* data, uint8_t length);
 void grbl_hal_stepper_set_state(uint8_t state);
 
 void grbl_hal_stepper_timer_base_init(float usec);
+void grbl_hal_stepper_timer_base_stop(void);
 void grbl_hal_stepper_timer_base_set_reload(uint32_t val);
 void grbl_hal_stepper_timer_base_set_prescaler(uint32_t val);
 void grbl_hal_stepper_timer_base_irq_start(void);
 
 void grbl_hal_stepper_timer_pulse_init(float usec);
+void grbl_hal_stepper_timer_pulse_stop(void);
 void grbl_hal_stepper_timer_pulse_set_reload(uint32_t val);
 void grbl_hal_stepper_timer_pulse_set_prescaler(uint32_t val);
 void grbl_hal_stepper_timer_pulse_set_compare(uint32_t val);

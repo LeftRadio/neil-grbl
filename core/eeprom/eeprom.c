@@ -25,7 +25,7 @@
   * @param  addr  EEPROM address to read from.
   * @retval The byte read from the EEPROM address.
   */
-static uint8_t eeprom_get_char(uint16_t addr) {
+uint8_t eeprom_get_char(uint16_t addr) {
     return grbl_hal_eeprom_read_byte(addr);
 }
 
@@ -34,7 +34,7 @@ static uint8_t eeprom_get_char(uint16_t addr) {
   * @param  addr  EEPROM address to write to.
   * @retval new_value  New EEPROM value.
   */
-static void eeprom_put_char(uint16_t addr, uint8_t new_value) {
+void eeprom_put_char(uint16_t addr, uint8_t new_value) {
     /* Ensure atomic operation for the write operation. */
     grbl_hal_critical_enter();
     /* Write */

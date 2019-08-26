@@ -19,10 +19,11 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef settings_h
-#define settings_h
+#ifndef __settings_h
+#define __settings_h
 
 #include "grbl.h"
+#include "nuts_bolts.h"
 
 #ifndef STEPPER_SEGMENT_BUFFER_SIZE
   #define STEPPER_SEGMENT_BUFFER_SIZE 6
@@ -87,7 +88,7 @@
 #define AXIS_SETTINGS_INCREMENT  10  // Must be greater than the number of axis settings
 
 // Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
-typedef struct {
+typedef struct _settings_t {
   // Axis settings
   float steps_per_mm[N_AXIS];
   float max_rate[N_AXIS];

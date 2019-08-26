@@ -144,7 +144,7 @@ static void planner_recalculate()
   block_index = plan_prev_block_index(block_index);
   if (block_index == block_buffer_planned) { // Only two plannable blocks in buffer. Reverse pass complete.
     // Check if the first block is the tail. If so, notify stepper to update its current parameters.
-    if (block_index == block_buffer_tail) { st_update_plan_block_parameters(); }
+    if (block_index == block_buffer_tail) { stepper_update_plan_block_parameters(); }
   } else { // Three or more plan-able blocks
     while (block_index != block_buffer_planned) {
       next = current;
@@ -152,7 +152,7 @@ static void planner_recalculate()
       block_index = plan_prev_block_index(block_index);
 
       // Check if next block is the tail block(=planned block). If so, update current stepper parameters.
-      if (block_index == block_buffer_tail) { st_update_plan_block_parameters(); }
+      if (block_index == block_buffer_tail) { stepper_update_plan_block_parameters(); }
 
       // Compute maximum entry speed decelerating over the current block from its exit speed.
       if (current->entry_speed_sqr != current->max_entry_speed_sqr) {
@@ -331,13 +331,13 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
   uint8_t idx;
 
   // Copy position data based on type of motion being planned.
-  if (block->condition & PL_COND_FLAG_SYSTEM_MOTION) { 
+  if (block->condition & PL_COND_FLAG_SYSTEM_MOTION) {
     #ifdef COREXY
       position_steps[X_AXIS] = system_convert_corexy_to_x_axis_steps(sys_position);
       position_steps[Y_AXIS] = system_convert_corexy_to_y_axis_steps(sys_position);
       position_steps[Z_AXIS] = sys_position[Z_AXIS];
     #else
-      memcpy(position_steps, sys_position, sizeof(sys_position)); 
+      memcpy(position_steps, sys_position, sizeof(sys_position));
     #endif
   } else { memcpy(position_steps, pl.position, sizeof(pl.position)); }
 
@@ -373,8 +373,10 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
 	  #endif
     unit_vec[idx] = delta_mm; // Store unit vector numerator
 
-    // Set direction bits. Bit enabled always means direction is negative.
-    if (delta_mm < 0.0 ) { block->direction_bits |= get_direction_pin_mask(idx); }
+    /* set direction bits, bit enabled always means direction is negative */
+    if (delta_mm < 0.0 ) {
+        block->direction_bits |= (uint8_t)(1<<idx);
+    }
   }
 
   // Bail if this is a zero-length block. Highly unlikely to occur.
@@ -390,7 +392,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
 
   // Store programmed rate.
   if (block->condition & PL_COND_FLAG_RAPID_MOTION) { block->programmed_rate = block->rapid_rate; }
-  else { 
+  else {
     block->programmed_rate = pl_data->feed_rate;
     if (block->condition & PL_COND_FLAG_INVERSE_TIME) { block->programmed_rate *= block->millimeters; }
   }
@@ -516,7 +518,7 @@ uint8_t plan_get_block_buffer_count()
 void plan_cycle_reinitialize()
 {
   // Re-plan from a complete stop. Reset planner entry speeds and buffer planned pointer.
-  st_update_plan_block_parameters();
+  stepper_update_plan_block_parameters();
   block_buffer_planned = block_buffer_tail;
   planner_recalculate();
 }
