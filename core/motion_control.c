@@ -113,11 +113,11 @@ void mc_arc(float *target, plan_line_data_t *pl_data, float *position, float *of
     // Multiply inverse feed_rate to compensate for the fact that this movement is approximated
     // by a number of discrete segments. The inverse feed_rate should be correct for the sum of
     // all segments.
-    if (pl_data->condition & PL_COND_FLAG_INVERSE_TIME) { 
-      pl_data->feed_rate *= segments; 
+    if (pl_data->condition & PL_COND_FLAG_INVERSE_TIME) {
+      pl_data->feed_rate *= segments;
       bit_false(pl_data->condition,PL_COND_FLAG_INVERSE_TIME); // Force as feed absolute mode over arc segments.
     }
-    
+
     float theta_per_segment = angular_travel/segments;
     float linear_per_segment = (target[axis_linear] - position[axis_linear])/segments;
 
@@ -216,11 +216,11 @@ void mc_homing_cycle(uint8_t cycle_mask)
     }
   #endif
 
-  limits_disable(); // Disable hard limits pin change register for cycle duration
+  limits_state(0); // Disable hard limits pin change register for cycle duration
 
   // -------------------------------------------------------------------------------------
   // Perform homing routine. NOTE: Special motion case. Only system reset works.
-  
+
   #ifdef HOMING_SINGLE_AXIS_COMMANDS
     if (cycle_mask) { limits_go_home(cycle_mask); } // Perform homing cycle based on mask.
     else
@@ -304,7 +304,7 @@ uint8_t mc_probe_cycle(float *target, plan_line_data_t *pl_data, uint8_t parser_
   protocol_execute_realtime();   // Check and execute run-time commands
 
   // Reset the stepper and planner buffers to remove the remainder of the probe motion.
-  st_reset(); // Reset step segment buffer.
+  stepper_reset(); // Reset step segment buffer.
   plan_reset(); // Reset planner buffer. Zero planner positions. Ensure probing motion is cleared.
   plan_sync_position(); // Sync planner position to current machine position.
 
@@ -379,7 +379,7 @@ void mc_reset()
     // violated, by which, all bets are off.
     if ((sys.state & (STATE_CYCLE | STATE_HOMING | STATE_JOG)) ||
     		(sys.step_control & (STEP_CONTROL_EXECUTE_HOLD | STEP_CONTROL_EXECUTE_SYS_MOTION))) {
-      if (sys.state == STATE_HOMING) { 
+      if (sys.state == STATE_HOMING) {
         if (!sys_rt_exec_alarm) {system_set_exec_alarm(EXEC_ALARM_HOMING_FAIL_RESET); }
       } else { system_set_exec_alarm(EXEC_ALARM_ABORT_CYCLE); }
       st_go_idle(); // Force kill steppers. Position has likely been lost.

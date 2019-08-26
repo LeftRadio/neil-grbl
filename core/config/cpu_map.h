@@ -29,107 +29,53 @@
 
 /* Define step/direction bits.
    NOTE: do NOT change this bits, this bith is only as "virtual" and equal with X_AXIS define */
-#define X_STEP_BIT                ((uint8_t)0)
-#define Y_STEP_BIT                ((uint8_t)1)
-#define Z_STEP_BIT                ((uint8_t)2)
-#define STEP_MASK                 ((uint8_t)((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)))
-#define X_DIRECTION_BIT           ((uint8_t)0)
-#define Y_DIRECTION_BIT           ((uint8_t)1)
-#define Z_DIRECTION_BIT           ((uint8_t)2)
-#define DIRECTION_MASK            ((uint8_t)((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)))
+#define X_STEP_BIT                          ((uint8_t)0)
+#define Y_STEP_BIT                          ((uint8_t)1)
+#define Z_STEP_BIT                          ((uint8_t)2)
+#define STEP_MASK                           ((uint8_t)((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)))
+#define X_DIRECTION_BIT                     ((uint8_t)0)
+#define Y_DIRECTION_BIT                     ((uint8_t)1)
+#define Z_DIRECTION_BIT                     ((uint8_t)2)
+#define DIRECTION_MASK                      ((uint8_t)((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)))
 
 /* Define stepper driver enable/disable output bits */
-#define STEPPERS_DISABLE_BIT      ((uint8_t)0)
-#define STEPPERS_DISABLE_MASK     ((uint8_t)(1<<STEPPERS_DISABLE_BIT))
+#define STEPPERS_DISABLE_BIT                ((uint8_t)0)
+#define STEPPERS_DISABLE_MASK               ((uint8_t)(1<<STEPPERS_DISABLE_BIT))
 
 /* Define homing/hard limit switch input pins and limit interrupt vectors */
-#define X_LIMIT_BIT      1  // Uno Digital Pin 9
-#define Y_LIMIT_BIT      2  // Uno Digital Pin 10
-
-#ifdef VARIABLE_SPINDLE // Z Limit pin and spindle enabled swapped to access hardware PWM on Pin 11.
-  #define Z_LIMIT_BIT	   4 // Uno Digital Pin 12
-#else
-  #define Z_LIMIT_BIT    3  // Uno Digital Pin 11
-#endif
-#define LIMIT_MASK       ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
-#define LIMIT_INT        PCIE0  // Pin change interrupt enable pin
-#define LIMIT_INT_vect   PCINT0_vect
-#define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register
+#define X_LIMIT_BIT                         ((uint8_t)0)
+#define Y_LIMIT_BIT                         ((uint8_t)1)
+#define Z_LIMIT_BIT                         ((uint8_t)2)
+#define LIMIT_MASK                          ((uint8_t)((1 << X_LIMIT_BIT) | (1 << Y_LIMIT_BIT) | (1 << Z_LIMIT_BIT)))
 
 // Define spindle enable and spindle direction output pins.
-#define SPINDLE_ENABLE_DDR    DDRB
-#define SPINDLE_ENABLE_PORT   PORTB
-// Z Limit pin and spindle PWM/enable pin swapped to access hardware PWM on Pin 11.
-#ifdef VARIABLE_SPINDLE
-  #ifdef USE_SPINDLE_DIR_AS_ENABLE_PIN
-    // If enabled, spindle direction pin now used as spindle enable, while PWM remains on D11.
-    #define SPINDLE_ENABLE_BIT    5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
-  #else
-    #define SPINDLE_ENABLE_BIT    3  // Uno Digital Pin 11
-  #endif
-#else
-  #define SPINDLE_ENABLE_BIT    4  // Uno Digital Pin 12
-#endif
-#ifndef USE_SPINDLE_DIR_AS_ENABLE_PIN
-  #define SPINDLE_DIRECTION_DDR   DDRB
-  #define SPINDLE_DIRECTION_PORT  PORTB
-  #define SPINDLE_DIRECTION_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
-#endif
+#define SPINDLE_ENABLE_BIT                  ((uint8_t)0)
+#define SPINDLE_DIRECTION_BIT               ((uint8_t)1)
 
 // Define flood and mist coolant enable output pins.
-#define COOLANT_FLOOD_DDR   DDRC
-#define COOLANT_FLOOD_PORT  PORTC
-#define COOLANT_FLOOD_BIT   3  // Uno Analog Pin 3
-#define COOLANT_MIST_DDR   DDRC
-#define COOLANT_MIST_PORT  PORTC
-#define COOLANT_MIST_BIT   4  // Uno Analog Pin 4
+#define COOLANT_FLOOD_BIT                   ((uint8_t)0)
+#define COOLANT_MIST_BIT                    ((uint8_t)1)
 
 // Define user-control controls (cycle start, reset, feed hold) input pins.
-// NOTE: All CONTROLs pins must be on the same port and not on a port with other input pins (limits).
-#define CONTROL_DDR       DDRC
-#define CONTROL_PIN       PINC
-#define CONTROL_PORT      PORTC
-#define CONTROL_RESET_BIT         0  // Uno Analog Pin 0
-#define CONTROL_FEED_HOLD_BIT     1  // Uno Analog Pin 1
-#define CONTROL_CYCLE_START_BIT   2  // Uno Analog Pin 2
-#define CONTROL_SAFETY_DOOR_BIT   1  // Uno Analog Pin 1 NOTE: Safety door is shared with feed hold. Enabled by config define.
-#define CONTROL_INT       PCIE1  // Pin change interrupt enable pin
-#define CONTROL_INT_vect  PCINT1_vect
-#define CONTROL_PCMSK     PCMSK1 // Pin change interrupt register
-#define CONTROL_MASK      ((1<<CONTROL_RESET_BIT)|(1<<CONTROL_FEED_HOLD_BIT)|(1<<CONTROL_CYCLE_START_BIT)|(1<<CONTROL_SAFETY_DOOR_BIT))
-#define CONTROL_INVERT_MASK   CONTROL_MASK // May be re-defined to only invert certain control pins.
+#define CONTROL_RESET_BIT                   ((uint8_t)0)
+#define CONTROL_FEED_HOLD_BIT               ((uint8_t)1)
+#define CONTROL_CYCLE_START_BIT             ((uint8_t)2)
+#define CONTROL_SAFETY_DOOR_BIT             ((uint8_t)3)
+#define CONTROL_MASK                        ((uint8_t)((1<<CONTROL_RESET_BIT)|(1<<CONTROL_FEED_HOLD_BIT)|(1<<CONTROL_CYCLE_START_BIT)|(1<<CONTROL_SAFETY_DOOR_BIT)))
+#define CONTROL_INVERT_MASK                 ((uint8_t)CONTROL_MASK)
 
 // Define probe switch input pin.
-#define PROBE_DDR       DDRC
-#define PROBE_PIN       PINC
-#define PROBE_PORT      PORTC
-#define PROBE_BIT       5  // Uno Analog Pin 5
-#define PROBE_MASK      (1<<PROBE_BIT)
+#define PROBE_BIT                           ((uint8_t)5)
+#define PROBE_MASK                          ((uint8_t)(1<<PROBE_BIT))
 
 // Variable spindle configuration below. Do not change unless you know what you are doing.
 // NOTE: Only used when variable spindle is enabled.
-#define SPINDLE_PWM_MAX_VALUE     255 // Don't change. 328p fast PWM mode fixes top value as 255.
-#ifndef SPINDLE_PWM_MIN_VALUE
-  #define SPINDLE_PWM_MIN_VALUE   1   // Must be greater than zero.
-#endif
-#define SPINDLE_PWM_OFF_VALUE     0
-#define SPINDLE_PWM_RANGE         (SPINDLE_PWM_MAX_VALUE-SPINDLE_PWM_MIN_VALUE)
-#define SPINDLE_TCCRA_REGISTER	  TCCR2A
-#define SPINDLE_TCCRB_REGISTER	  TCCR2B
-#define SPINDLE_OCR_REGISTER      OCR2A
-#define SPINDLE_COMB_BIT	        COM2A1
+#define SPINDLE_PWM_MAX_VALUE               ((uint8_t)255)
+#define SPINDLE_PWM_MIN_VALUE               1
+#define SPINDLE_PWM_OFF_VALUE               ((uint8_t)0)
+#define SPINDLE_PWM_RANGE                   ((uint8_t)(SPINDLE_PWM_MAX_VALUE - SPINDLE_PWM_MIN_VALUE))
 
-// Prescaled, 8-bit Fast PWM mode.
-#define SPINDLE_TCCRA_INIT_MASK   ((1<<WGM20) | (1<<WGM21))  // Configures fast PWM mode.
-// #define SPINDLE_TCCRB_INIT_MASK   (1<<CS20)               // Disable prescaler -> 62.5kHz
-// #define SPINDLE_TCCRB_INIT_MASK   (1<<CS21)               // 1/8 prescaler -> 7.8kHz (Used in v0.9)
-// #define SPINDLE_TCCRB_INIT_MASK   ((1<<CS21) | (1<<CS20)) // 1/32 prescaler -> 1.96kHz
-#define SPINDLE_TCCRB_INIT_MASK      (1<<CS22)               // 1/64 prescaler -> 0.98kHz (J-tech laser)
-
-// NOTE: On the 328p, these must be the same as the SPINDLE_ENABLE settings.
-#define SPINDLE_PWM_DDR	  DDRB
-#define SPINDLE_PWM_PORT  PORTB
-#define SPINDLE_PWM_BIT	  3    // Uno Digital Pin 11
+#define SPINDLE_PWM_BIT	                    ((uint8_t)0)
 
 
 /*

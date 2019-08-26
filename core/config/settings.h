@@ -24,6 +24,9 @@
 
 #include "grbl.h"
 
+#ifndef STEPPER_SEGMENT_BUFFER_SIZE
+  #define STEPPER_SEGMENT_BUFFER_SIZE 6
+#endif
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom

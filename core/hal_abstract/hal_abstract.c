@@ -13,6 +13,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+#define __weak          __attribute__((weak))
+
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -26,7 +28,7 @@
   * @retval None
   */
 __weak void grbl_hal_critical_enter(void) {
-    (void);
+    /* */
 }
 
 /**
@@ -34,8 +36,8 @@ __weak void grbl_hal_critical_enter(void) {
   * @param  None
   * @retval None
   */
-__weak void grbl_hal_critical_exit(void); {
-    (void);
+__weak void grbl_hal_critical_exit(void) {
+    /* */
 }
 
 
@@ -55,7 +57,7 @@ __weak uint8_t grbl_hal_eeprom_read_byte(uint16_t addr) {
   * @retval The byte read from the EEPROM address.
   */
 __weak void grbl_hal_eeprom_write_byte(uint16_t addr, uint8_t new_value) {
-    return 0;
+    /* */
 }
 
 
@@ -66,7 +68,7 @@ __weak void grbl_hal_eeprom_write_byte(uint16_t addr, uint8_t new_value) {
   * @retval None
   */
 __weak void grbl_hal_serail_init(uint32_t baudrate) {
-    (void);
+    /* */
 }
 
 /**
@@ -75,7 +77,7 @@ __weak void grbl_hal_serail_init(uint32_t baudrate) {
   * @retval None
   */
 __weak void grbl_hal_serial_write_byte(uint8_t data) {
-
+    /* */
 }
 
 /**
@@ -83,8 +85,8 @@ __weak void grbl_hal_serial_write_byte(uint8_t data) {
   * @param  None
   * @retval None
   */
-__weak void grbl_hal_serail_stop_tx(uint8_t data) {
-
+__weak void grbl_hal_serail_stop_tx(void) {
+    /* */
 }
 
 
@@ -95,7 +97,7 @@ __weak void grbl_hal_serail_stop_tx(uint8_t data) {
   * @retval None
   */
 void grbl_hal_stepper_gpio_init(void) {
-
+    /* */
 }
 
 /**
@@ -104,7 +106,7 @@ void grbl_hal_stepper_gpio_init(void) {
   * @retval None
   */
 void grbl_hal_stepper_timer_base_init(float usec) {
-
+    /* */
 }
 
 /**
@@ -113,7 +115,7 @@ void grbl_hal_stepper_timer_base_init(float usec) {
   * @retval None
   */
 void grbl_hal_stepper_timer_reset_init(float usec) {
-
+    /* */
 }
 
 
