@@ -1,0 +1,21 @@
+{
+    "build_systems":
+    [
+        {
+            "cmd": ["make", "-j16"],
+            "file_regex": "^(.*):(\\d+):(\\d+):\\s*(.*)$",
+            "name": "make build",
+            "variants":
+            [
+                {
+                    "cmd": ["make", "-j16", "clean" ],
+                    "name": "Clean",
+                    "windows": {"cmd": ["mingw32-make", "-j16", "clean"]}
+                }
+            ],
+            "windows": {"cmd": ["mingw32-make", "-j16"]},
+            "working_dir": "${project_path}"
+        }
+    ],
+    "folders": [{"path": "."}],
+}
