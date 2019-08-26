@@ -25,23 +25,22 @@
 /* Exported variables --------------------------------------------------------*/
 /* Exported function ---------------------------------------------------------*/
 
-extern void stepper_init();
-extern void st_wake_up(void);
-extern void st_go_idle(void);
-extern void st_generate_step_dir_invert_masks(void);
-extern void st_reset(void);
-extern void st_parking_setup_buffer(void);
-extern void st_parking_restore_buffer(void);
-extern void st_prep_buffer(void);
-extern void st_update_plan_block_parameters(void);
-extern float st_get_realtime_rate(void);
-/* */
-extern uint8_t get_step_pin_mask(uint8_t axis_idx);
-extern uint8_t get_direction_pin_mask(uint8_t axis_idx);
-extern uint8_t get_limit_pin_mask(uint8_t axis_idx);
+extern void stepper_init(void);
+extern void stepper_wake_up(void);
+extern void stepper_go_idle(void);
+extern void stepper_reset(void);
+extern void stepper_prep_buffer(void);
+extern void stepper_update_plan_block_parameters(void);
+
+#ifdef PARKING_ENABLE
+extern void stepper_parking_setup_buffer(void);
+extern void stepper_parking_restore_buffer(void);
+#endif
+
+extern float stepper_get_realtime_rate(void);
 
 
-#endif /* __GRBL_HAL__H */
+#endif /* __GRBL_STEPPER_H */
 /*******************************************************************************
       END FILE
 *******************************************************************************/

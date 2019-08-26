@@ -18,7 +18,7 @@
 /* Exported define -----------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported typedef ----------------------------------------------------------*/
-typedef enum { STEP_PORT, DIRECTION_PORT } grbl_stepper_port_t;
+typedef enum { STEP_PORT, DIRECTION_PORT, LIMIT_PORT } grbl_stepper_port_t;
 
 /* Exported variables --------------------------------------------------------*/
 /* Exported function ---------------------------------------------------------*/

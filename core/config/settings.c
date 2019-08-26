@@ -26,8 +26,8 @@ settings_t settings;
 const __flash settings_t defaults = {\
     .pulse_microseconds = DEFAULT_STEP_PULSE_MICROSECONDS,
     .stepper_idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME,
-    .step_invert_mask = DEFAULT_STEPPING_INVERT_MASK,
-    .dir_invert_mask = DEFAULT_DIRECTION_INVERT_MASK,
+    // .step_invert_mask = DEFAULT_STEPPING_INVERT_MASK,
+    // .dir_invert_mask = DEFAULT_DIRECTION_INVERT_MASK,
     .status_report_mask = DEFAULT_STATUS_REPORT_MASK,
     .junction_deviation = DEFAULT_JUNCTION_DEVIATION,
     .arc_tolerance = DEFAULT_ARC_TOLERANCE,
@@ -203,7 +203,7 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
         switch (set_idx) {
           case 0:
             #ifdef MAX_STEP_RATE_HZ
-              if (value*settings.max_rate[parameter] > (MAX_STEP_RATE_HZ*60.0)) { return(STATUS_MAX_STEP_RATE_EXCEEDED); }
+              if (value * settings.max_rate[parameter] > (MAX_STEP_RATE_HZ*60.0)) { return(STATUS_MAX_STEP_RATE_EXCEEDED); }
             #endif
             settings.steps_per_mm[parameter] = value;
             break;
@@ -233,12 +233,12 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
         settings.pulse_microseconds = int_value; break;
       case 1: settings.stepper_idle_lock_time = int_value; break;
       case 2:
-        settings.step_invert_mask = int_value;
-        st_generate_step_dir_invert_masks(); // Regenerate step and direction port invert masks.
+        // settings.step_invert_mask = int_value;
+        // st_generate_step_dir_invert_masks(); // Regenerate step and direction port invert masks.
         break;
       case 3:
-        settings.dir_invert_mask = int_value;
-        st_generate_step_dir_invert_masks(); // Regenerate step and direction port invert masks.
+        // settings.dir_invert_mask = int_value;
+        // st_generate_step_dir_invert_masks(); // Regenerate step and direction port invert masks.
         break;
       case 4: // Reset to ensure change. Immediate re-init may cause problems.
         if (int_value) { settings.flags |= BITFLAG_INVERT_ST_ENABLE; }
