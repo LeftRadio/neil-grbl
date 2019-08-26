@@ -20,25 +20,33 @@
 /* Exported macro ------------------------------------------------------------*/
 /* Exported typedef ----------------------------------------------------------*/
 
-/* stores the planner block Bresenham algorithm execution data for the segments in the segment
-   buffer. Normally, this buffer is partially in-use, but, for the worst case scenario, it will
-   never exceed the number of accessible stepper buffer segments (SEGMENT_BUFFER_SIZE-1).
-   NOTE: This data is copied from the prepped planner blocks so that the planner blocks may be
-   discarded when entirely consumed and completed by the segment buffer. Also, AMASS alters this
-   data for its own use. */
+/* Stores the one block of Bresenham algorithm execution data */
 typedef struct _st_block_t {
     uint32_t steps[N_AXIS];
     uint32_t step_event_count;
     uint8_t direction_bits;
+    /* tracks motions that require constant laser power/rate */
     #ifdef VARIABLE_SPINDLE
-      uint8_t is_pwm_rate_adjusted; // Tracks motions that require constant laser power/rate
+      uint8_t is_pwm_rate_adjusted;
     #endif
 } st_block_t;
 
-/* primary stepper segment ring buffer. Contains small, short line segments for the stepper
-   algorithm to execute, which are "checked-out" incrementally from the first block in the
-   planner buffer. Once "checked-out", the steps in the segments buffer cannot be modified by
-   the planner, where the remaining planner block steps still can. */
+/* Stores the planner blocks for the segments in the segment buffer.
+   Normally, this buffer is partially in-use, but, for the worst case scenario, it will
+   never exceed the number of accessible stepper buffer segments (STEPPER_SEGMENT_BUFFER_SIZE-1).
+   NOTE: This data is copied from the prepped planner blocks so that the planner blocks may be
+   discarded when entirely consumed and completed by the segment buffer. Also, AMASS alters this
+   data for its own use. */
+typedef struct _st_block_buffer_t {
+    st_block_t buffer[STEPPER_SEGMENT_BUFFER_SIZE-1];
+    /* Pointers for the step segment being prepped from the planner buffer.
+       Accessed only by the main program. Pointers may be planning segments
+       or planner blocks ahead of what being executed */
+    plan_block_t *pl_block;     // planner block being prepped
+    st_block_t *st_prep_block;  // stepper block data being prepped
+} st_block_buffer_t;
+
+/* Step one segment type */
 typedef struct _segment_t {
     uint16_t n_step;           // Number of step events to be executed for this segment
     uint16_t cycles_per_tick;  // Step distance traveled per ISR tick, aka step rate.
@@ -53,7 +61,18 @@ typedef struct _segment_t {
     #endif
 } segment_t;
 
-/* stepper data struct. Contains the running data for the main stepper ISR */
+/* Primary stepper segments ring buffer. Contains small, short line segments for the stepper
+   algorithm to execute, which are "checked-out" incrementally from the first block in the
+   planner buffer. Once "checked-out", the steps in the segments buffer cannot be modified by
+   the planner, where the remaining planner block steps still can. */
+typedef struct _segments_buf_t {
+    segment_t buffer[STEPPER_SEGMENT_BUFFER_SIZE];
+    uint8_t segment_buffer_head;
+    uint8_t segment_next_head;
+    volatile uint8_t segment_buffer_tail;
+} segments_t;
+
+/* Stepper data struct. Contains the running data for the main stepper ISR */
 typedef struct _stepper_t {
     /* Used by the bresenham line algorithm */
     uint32_t counter_x, counter_y, counter_z;

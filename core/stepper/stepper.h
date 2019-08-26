@@ -16,10 +16,6 @@
 #include <stdint.h>
 
 /* Exported define -----------------------------------------------------------*/
-#ifndef SEGMENT_BUFFER_SIZE
-  #define SEGMENT_BUFFER_SIZE 6
-#endif
-
 /* Exported macro ------------------------------------------------------------*/
 /* Exported typedef ----------------------------------------------------------*/
 /* Exported variables --------------------------------------------------------*/
