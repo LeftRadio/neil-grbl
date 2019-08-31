@@ -724,7 +724,7 @@ void stepper_parking_restore_buffer(void) {
   * @param  None
   * @retval rate as float value
   */
-float st_get_realtime_rate(void) {
+float stepper_get_realtime_rate(void) {
     if ( sys.state & (STATE_CYCLE | STATE_HOMING | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR) ){
         return prep.current_speed;
     }

@@ -92,7 +92,7 @@ void serial_init(void) {
   * @param  data byte
   * @retval None
   */
-void grbl_serial_write(uint8_t data) {
+void serial_write(uint8_t data) {
     // Calculate next head
     uint8_t next_head = serial_tx_buffer_head + 1;
     if (next_head == TX_RING_BUFFER) { next_head = 0; }
