@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
-  * @file    hal_abstract.c
-  * @author  leftradio
+  * @file    jog.c
+  * @author
   * @version 1.0.0
   * @date
   * @brief
@@ -10,8 +10,11 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "jog.h"
-#include "grbl.h"
-#include "hal_abstract.h"
+#include "settings.h"
+#include "system.h"
+#include "report.h"
+#include "motion_control.h"
+#include "stepper.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -46,7 +49,7 @@ uint8_t jog_execute(plan_line_data_t *pl_data, parser_block_t *gc_block) {
   mc_line(gc_block->values.xyz,pl_data);
   if (sys.state == STATE_IDLE) {
       /* Check if there is a block to execute */
-      if (plan_get_current_block() != NULL) {
+      if ( plan_get_current_block() != (void*)0 ) {
           sys.state = STATE_JOG;
           stepper_prep_buffer();
           /* NOTE: Manual start. No state machine required */

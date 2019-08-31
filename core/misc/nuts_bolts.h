@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    nuts_bolts.h
-  * @author  leftradio
+  * @author
   * @version 1.0.0
   * @date
   * @brief
@@ -61,12 +61,14 @@
 
 /* Exported macro ------------------------------------------------------------*/
 /* Exported typedef ----------------------------------------------------------*/
+typedef enum {true_g, false_g} bool_g;
 /* Exported variables --------------------------------------------------------*/
 /* Exported function ---------------------------------------------------------*/
 extern uint8_t read_float(char *line, uint8_t *char_counter, float *float_ptr);
 extern float hypot_f(float x, float y);
 extern float convert_delta_vector_to_unit_vector(float *vector);
 extern float limit_value_by_axis_maximum(float *max_value, float *unit_vec);
+extern void delay_sec_nonblock(float seconds, uint8_t mode);
 
 
 #endif /* __GRBL_MISC_H */

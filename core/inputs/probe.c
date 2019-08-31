@@ -1,7 +1,7 @@
 /*
   ******************************************************************************
   * @file     probe.c
-  * @author   leftradio
+  * @author
   * @version  1.0.0
   * @date
   * @brief
@@ -9,11 +9,11 @@
 **/
 
 /* Includes ------------------------------------------------------------------*/
-// #include "grbl.h"
+#include <string.h>
 #include "probe.h"
-#include "nuts_bolts.h"
-#include "settings.h"
+#include "system.h"
 #include "hal_abstract.h"
+#include "nuts_bolts.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -43,28 +43,7 @@ uint8_t probe_invert_mask;
   */
 void probe_init(void) {
     /* */
-    #ifdef DISABLE_PROBE_PIN_PULL_UP
-      grbl_hal_gpio_init(PROBE_PORT, PULL_DOWN);
-    #else
-      grbl_hal_gpio_init(PROBE_PORT, PULL_UP);
-    #endif
-    /* */
-    probe_configure_invert_mask(false); // Initialize invert mask.
-}
-
-/**
-  * @brief  Called by probe_init() and the mc_probe() routines. Sets up the probe pin invert mask to
-            appropriately set the pin logic according to setting for normal-high/normal-low operation
-            and the probing cycle modes for toward-workpiece/away-from-workpiece.
-  * @param  is probe away
-  * @retval None
-  */
-void probe_configure_invert_mask(uint8_t is_probe_away) {
-  /* initialize as zero */
-  probe_invert_mask = 0;
-  /* */
-  if (bit_isfalse(settings.flags,BITFLAG_INVERT_PROBE_PIN)) { probe_invert_mask ^= PROBE_MASK; }
-  if (is_probe_away) { probe_invert_mask ^= PROBE_MASK; }
+    ngrbl_hal_probe_init();
 }
 
 /**
@@ -75,7 +54,7 @@ void probe_configure_invert_mask(uint8_t is_probe_away) {
   */
 uint8_t probe_get_state(void) {
     /* */
-    return grbl_hal_gpio_get_port(PROBE_PORT, PROBE_MASK) ^ probe_invert_mask;
+    return ngrbl_hal_probe_get_state();
 }
 
 /**
@@ -87,11 +66,12 @@ uint8_t probe_get_state(void) {
   */
 void probe_state_monitor(void) {
     /* */
-    if ( !probe_get_state() ) return;
+    if ( !ngrbl_hal_probe_get_state() ) {
+        return;
+    }
     /* */
     sys_probe_state = PROBE_OFF;
     memcpy(sys_probe_position, sys_position, sizeof(sys_position));
-    // bit_true(sys_rt_exec_state, EXEC_MOTION_CANCEL);
 }
 
 

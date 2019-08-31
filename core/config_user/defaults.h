@@ -27,6 +27,9 @@
 
 #ifndef defaults_h
 
+#include "config.h"
+
+
 #ifdef DEFAULTS_GENERIC
   // Grbl generic default settings. Should work across different machines.
   #define DEFAULT_X_STEPS_PER_MM 250.0

@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file     stepper.c
-  * @author   leftradio
+  * @author
   * @version  1.0.0
   * @date
   * @brief    Stepper motor driver: executes motion plans using stepper motors
@@ -47,10 +47,16 @@
 */
 
 /* Includes ------------------------------------------------------------------*/
+#include <string.h>
+#include <math.h>
 #include "stepper.h"
 #include "stepper_types.h"
 #include "config.h"
+#include "system.h"
+#include "spindle_control.h"
+#include "probe.h"
 #include "hal_abstract.h"
+#include "nuts_bolts.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -86,8 +92,8 @@ static st_prep_t prep;
 static void _st_step_dir_bits_reset(void) {
     stepper.step_outbits = 0;
     stepper.dir_outbits = 0;
-    grbl_hal_gpio_set_port(STEP_PORT, STEP_MASK, stepper.step_outbits);
-    grbl_hal_gpio_set_port(DIRECTION_PORT, DIRECTION_MASK, stepper.dir_outbits);
+    ngrbl_hal_stepper_set_step(STEP_MASK, stepper.step_outbits);
+    ngrbl_hal_stepper_set_dir(DIRECTION_MASK, stepper.dir_outbits);
 }
 
 /**
@@ -112,14 +118,13 @@ static __inline uint8_t st_next_block_index(uint8_t block_index) {
   */
 void stepper_init(void) {
     /* Init GPIO for ENABLE, DIRECTION, STEP signals for all stepper drivers */
-    grbl_hal_gpio_init(STEP_PORT, PULL_NONE);
-    grbl_hal_gpio_init(DIRECTION_PORT, PULL_NONE);
+    ngrbl_hal_stepper_init();
     /* Init two timers:
        1 - base timer with 33.3usec period
        2 - pulse width timer with (settings.pulse_microseconds) period (default 10usec)
     */
-    grbl_hal_stepper_timer_base_init(33.3);
-    grbl_hal_stepper_timer_pulse_init(settings.pulse_microseconds);
+    ngrbl_hal_stepper_timer_base_init(33.3);
+    ngrbl_hal_stepper_timer_pulse_init(settings.pulse_microseconds);
 }
 
 /**
@@ -130,10 +135,10 @@ void stepper_init(void) {
   */
 void stepper_wake_up(void) {
     /* Enable stepper drivers */
-    grbl_hal_stepper_set_state(true);
+    ngrbl_hal_stepper_set_driver_state(NGRBL_HAL_ENABLE);
 
     #ifdef STP_DRIVERS_ENABLE_DELAY
-      grbl_hal_delay_ms(STP_DRIVERS_ENABLE_DELAY);
+      ngrbl_hal_delay_ms(STP_DRIVERS_ENABLE_DELAY);
     #endif
 
     /* reset step/dir output bits to ensure first ISR call does not step */
@@ -142,7 +147,7 @@ void stepper_wake_up(void) {
     /* Initialize step pulse timing from settings. Here to ensure updating after re-writing */
     #ifdef STEP_PULSE_DELAY
       /* set compare for pulse timer */
-      grbl_hal_stepper_timer_pulse_set_compare((STEP_PULSE_DELAY - 1) * TICKS_PER_MICROSECOND + 1);
+      ngrbl_hal_stepper_timer_pulse_set_compare((STEP_PULSE_DELAY - 1) * TICKS_PER_MICROSECOND + 1);
       /* Set total step pulse time after direction pin set. Ad hoc computation from oscilloscope */
       stepper.step_pulse_time = (settings.pulse_microseconds + (STEP_PULSE_DELAY - 1)) * TICKS_PER_MICROSECOND + 1;
     #else
@@ -151,18 +156,18 @@ void stepper_wake_up(void) {
     #endif
 
     /* set the autoreload value for base timer */
-    grbl_hal_stepper_timer_base_set_reload(stepper.exec_segment->cycles_per_tick - 1);
+    ngrbl_hal_stepper_timer_base_set_reload(stepper.exec_segment->cycles_per_tick - 1);
     /* Set step pulse time */
-    grbl_hal_stepper_timer_pulse_set_reload(stepper.step_pulse_time);
+    ngrbl_hal_stepper_timer_pulse_set_reload(stepper.step_pulse_time);
 
     #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
       /* set prescaler value for base timer */
-      grbl_hal_stepper_timer_base_set_prescaler(stepper.exec_segment->prescaler);
+      ngrbl_hal_stepper_timer_base_set_prescaler(stepper.exec_segment->prescaler);
     #endif
 
     /* Enable stepper drivers timers interrupts */
-    grbl_hal_stepper_timer_base_irq_start();
-    grbl_hal_stepper_timer_pulse_irq_start();
+    ngrbl_hal_stepper_timer_base_irq_start();
+    ngrbl_hal_stepper_timer_pulse_irq_start();
 }
 
 /**
@@ -173,21 +178,23 @@ void stepper_wake_up(void) {
 void stepper_go_idle(void) {
     /* disable stepper timer base interrupts.
        Allow port reset interrupt to finish, if active. */
-    grbl_hal_stepper_timer_base_stop();
-    grbl_hal_stepper_timer_pulse_stop();
+    ngrbl_hal_stepper_timer_base_stop();
+    ngrbl_hal_stepper_timer_pulse_stop();
     /* reset busy flag */
     stepper.busy = false;
     /* set idle state, disabled or enabled, depending on settings and circumstances. */
-    bool state = true;
+    ngrbl_hal_state_t state = NGRBL_HAL_ENABLE;
+    /* */
     if (((settings.stepper_idle_lock_time != 0xff) || \
           sys_rt_exec_alarm || sys.state == STATE_SLEEP) && sys.state != STATE_HOMING) {
         /* force dwell to lock axes for a defined amount of time to ensure the axes come to a complete
            stop and not drift from residual inertial forces at the end of the last movement. */
-        grbl_hal_delay_ms(settings.stepper_idle_lock_time);
-        state = false;
+        ngrbl_hal_delay_ms(settings.stepper_idle_lock_time);
+        /* */
+        state = NGRBL_HAL_DISABLE;
     }
     /* update state for stepper drivers */
-    grbl_hal_stepper_set_state(state);
+    ngrbl_hal_stepper_set_driver_state(state);
 }
 
 /**
@@ -208,7 +215,7 @@ void stepper_reset(void) {
     segments.head = 0;
     segments.next_head = 1;
     stepper.busy = false;
-    /* reset step/direction bits and hardware pins */
+    /* */
     _st_step_dir_bits_reset();
 }
 
@@ -780,22 +787,22 @@ void grbl_stepper_timer_base_irq_callback(void) {
     if (stepper.busy) { return; }
 
     /* stop base timer */
-    // grbl_hal_stepper_timer_base_stop();
+    // ngrbl_hal_stepper_timer_base_stop();
 
     /* Set the direction pins a couple of nanoseconds before we step the steppers */
-    grbl_hal_gpio_set_port(DIRECTION_PORT, DIRECTION_MASK, stepper.dir_outbits);
+    ngrbl_hal_stepper_set_dir(DIRECTION_MASK, stepper.dir_outbits);
 
     /* pulse the stepping pins */
     #ifdef STEP_PULSE_DELAY
       /* store out_bits to prevent overwriting */
       stepper.step_delay_bits = stepper.step_outbits;
     #else
-      grbl_hal_gpio_set_port(STEP_PORT, STEP_MASK, stepper.step_outbits);
+      ngrbl_hal_stepper_set_step(STEP_MASK, stepper.step_outbits);
     #endif
 
     /* Enable step pulse reset timer so that stepper port reset interrupt can reset the signal after
        exactly settings.pulse_microseconds microseconds, independent of the timer_pulse period and prescaler */
-    grbl_hal_stepper_timer_pulse_irq_start();
+    ngrbl_hal_stepper_timer_pulse_irq_start();
     stepper.busy = true;
 
     /* if there is no step segment, attempt to pop one from the stepper buffer */
@@ -809,12 +816,12 @@ void grbl_stepper_timer_base_irq_callback(void) {
             stepper.step_count = stepper.exec_segment->n_step;
 
             /* initialize step segment timing per step and load number of steps to execute */
-            grbl_hal_stepper_timer_base_set_reload(stepper.exec_segment->cycles_per_tick - 1);
+            ngrbl_hal_stepper_timer_base_set_reload(stepper.exec_segment->cycles_per_tick - 1);
 
             #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
               /* if AMASS is disabled, set timer prescaler for segments
                  with slow step frequencies (< 250Hz) */
-              grbl_hal_stepper_timer_base_set_prescaler(stepper.exec_segment->prescaler);
+              ngrbl_hal_stepper_timer_base_set_prescaler(stepper.exec_segment->prescaler);
             #endif
 
             /* if the new segment starts a new planner block, initialize stepper variables and counters.
@@ -913,10 +920,11 @@ void grbl_stepper_timer_base_irq_callback(void) {
   */
 void grbl_stepper_timer_pulse_irq_callback(void) {
     /* reset step/dir pulse cycle */
-    grbl_hal_gpio_set_port(STEP_PORT, STEP_MASK, (uint32_t)0);
+    ngrbl_hal_stepper_set_step(STEP_MASK, (uint8_t)0);
 }
 
 #ifdef STEP_PULSE_DELAY
+
 /**
   * @brief
   * @param  None
@@ -924,9 +932,10 @@ void grbl_stepper_timer_pulse_irq_callback(void) {
   */
 void grbl_stepper_timer_pulse_step_delay_irq_callback(void) {
     /* Begin step pulse */
-    grbl_hal_stepper_gpio_set_port(STEP_PORT, STEP_MASK, stepper.step_delay_bits);
+    ngrbl_hal_stepper_set_step(STEP_MASK, stepper.step_delay_bits);
 }
-#endif
+
+#endif /* STEP_PULSE_DELAY */
 
 
 /*******************************************************************************

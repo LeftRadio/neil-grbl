@@ -1,7 +1,7 @@
 /*
   ******************************************************************************
   * @file     limits.c
-  * @author   leftradio
+  * @author
   * @version  1.0.0
   * @date
   * @brief
@@ -9,9 +9,18 @@
 **/
 
 /* Includes ------------------------------------------------------------------*/
-#include "grbl.h"
+#include <math.h>
+#include <string.h>
+#include "system.h"
+#include "config.h"
+#include "planner.h"
 #include "limits.h"
+#include "settings.h"
+#include "stepper.h"
+#include "motion_control.h"
+#include "protocol.h"
 #include "hal_abstract.h"
+#include "nuts_bolts.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -38,11 +47,7 @@
   */
 void limits_init(void) {
     /* init limits gpio as input pins */
-    #ifdef DISABLE_LIMIT_PIN_PULL_UP
-      grbl_hal_gpio_init(LIMIT_PORT, PULL_DOWN);
-    #else
-      grbl_hal_gpio_init(LIMIT_PORT, PULL_UP);
-    #endif
+    ngrbl_hal_limits_init();
     /* */
     limits_state( bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE) );
 
@@ -60,10 +65,10 @@ void limits_init(void) {
   */
 void limits_state(uint8_t state) {
     if (state) {
-        grbl_hal_gpio_irq_set_state(LIMIT_PORT, IN_IRQ_ENABLE);
+        ngrbl_hal_limits_set_state(NGRBL_HAL_ENABLE);
     }
     else {
-        grbl_hal_gpio_irq_set_state(LIMIT_PORT, IN_IRQ_DISABLE);
+        ngrbl_hal_limits_set_state(NGRBL_HAL_DISABLE);
     }
 }
 
@@ -75,7 +80,7 @@ void limits_state(uint8_t state) {
   * @retval None
   */
 uint8_t limits_get_state(void) {
-    return grbl_hal_gpio_get_port(LIMIT_PORT, LIMIT_MASK);
+    return ngrbl_hal_limits_get_state();
 }
 
 /**
@@ -103,7 +108,7 @@ void limits_go_home(uint8_t cycle_mask) {
     #endif
 
     /* initialize variables used for homing computations */
-    uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE+1);
+    uint8_t n_cycle = (2 * N_HOMING_LOCATE_CYCLE + 1);
     uint8_t step_pin[N_AXIS];
     float target[N_AXIS];
     float max_travel = 0.0;
@@ -125,7 +130,7 @@ void limits_go_home(uint8_t cycle_mask) {
     }
 
     /* Set search mode with approach at seek rate to quickly engage the specified cycle_mask limit switches */
-    bool approach = true;
+    bool_g approach = true;
     float homing_rate = settings.homing_seek_rate;
 
     uint8_t limit_state, axislock, n_active_axis;
@@ -234,7 +239,7 @@ void limits_go_home(uint8_t cycle_mask) {
         /* immediately force kill steppers and reset step segment buffer */
         stepper_reset();
         /* delay to allow transient dynamics to dissipate */
-        grbl_hal_delay_ms(settings.homing_debounce_delay);
+        ngrbl_hal_delay_ms(settings.homing_debounce_delay);
         /* reverse direction and reset homing rate for locate cycle(s) */
         approach = !approach;
         /* after first cycle, homing enters locating phase. Shorten search to pull-off distance */
@@ -331,11 +336,11 @@ void limits_soft_check(float *target) {
 /* Callbacks -----------------------------------------------------------------*/
 
 /**
-  * @brief  grbl_limits_gpio_irq_callback
+  * @brief  ngrbl_limits_state_change_callback
   * @param  None
   * @retval None
   */
-void grbl_limits_gpio_irq_callback(void) {
+void ngrbl_limits_state_change_callback(uint8_t state) {
     /* Ignore limit switches if already in an alarm state or in-process of executing an alarm.
        When in the alarm state, Grbl should have been reset or will force a reset, so any pending
        moves in the planner and serial buffers are all cleared and newly sent blocks will be
@@ -345,7 +350,7 @@ void grbl_limits_gpio_irq_callback(void) {
 
       #ifdef HARD_LIMIT_FORCE_STATE_CHECK
         /* check limit pin state */
-        if (limits_get_state()) {
+        if (state) {
             /* initiate system kill and indicate hard limit critical event */
             mc_reset();
             system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT);

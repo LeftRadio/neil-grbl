@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    eeprom.c
-  * @author  leftradio
+  * @author
   * @version 1.0.0
   * @date
   * @brief
@@ -26,7 +26,7 @@
   * @retval The byte read from the EEPROM address.
   */
 uint8_t eeprom_get_char(uint16_t addr) {
-    return grbl_hal_eeprom_read_byte(addr);
+    return ngrbl_hal_eeprom_read_byte(addr);
 }
 
 /**
@@ -36,11 +36,11 @@ uint8_t eeprom_get_char(uint16_t addr) {
   */
 void eeprom_put_char(uint16_t addr, uint8_t new_value) {
     /* Ensure atomic operation for the write operation. */
-    grbl_hal_critical_enter();
+    ngrbl_hal_critical_enter();
     /* Write */
-    grbl_hal_eeprom_write_byte(addr, new_value);
+    ngrbl_hal_eeprom_write_byte(addr, new_value);
     /* Restore interrupt flag state. */
-    grbl_hal_critical_exit();
+    ngrbl_hal_critical_exit();
 }
 
 /**

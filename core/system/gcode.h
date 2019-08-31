@@ -1,28 +1,22 @@
-/*
-  gcode.h - rs274/ngc parser.
-  Part of Grbl
+/**
+  ******************************************************************************
+  * @file    gcode.h
+  * @author
+  * @version 1.0.0
+  * @date
+  * @brief
+  ******************************************************************************
+**/
 
-  Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
-  Copyright (c) 2009-2011 Simen Svale Skogsrud
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __GRBL_GCODE_H
+#define __GRBL_GCODE_H
 
-  Grbl is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+/* Includes ------------------------------------------------------------------*/
+#include <stdint.h>
+#include "planner.h"
 
-  Grbl is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-#ifndef gcode_h
-#define gcode_h
-
-
+/* Exported define -----------------------------------------------------------*/
 // Define modal group internal numbers for checking multiple command violations and tracking the
 // type of command that is called in the block. A modal group is a group of g-code commands that are
 // mutually exclusive, or cannot exist on the same line, because they each toggle a state or execute
@@ -48,9 +42,9 @@
 
 // Define command actions for within execution-type modal groups (motion, stopping, non-modal). Used
 // internally by the parser to know which command to execute.
-// NOTE: Some macro values are assigned specific values to make g-code state reporting and parsing 
+// NOTE: Some macro values are assigned specific values to make g-code state reporting and parsing
 // compile a litte smaller. Necessary due to being completely out of flash on the 328p. Although not
-// ideal, just be careful with values that state 'do not alter' and check both report.c and gcode.c 
+// ideal, just be careful with values that state 'do not alter' and check both report.c and gcode.c
 // to see how they are used, if you need to alter them.
 
 // Modal Group G0: Non-modal actions
@@ -161,7 +155,7 @@
 #define GC_PROBE_FAIL_INIT  GC_UPDATE_POS_NONE
 #define GC_PROBE_FAIL_END   GC_UPDATE_POS_TARGET
 #ifdef SET_CHECK_MODE_PROBE_TO_START
-  #define GC_PROBE_CHECK_MODE   GC_UPDATE_POS_NONE  
+  #define GC_PROBE_CHECK_MODE   GC_UPDATE_POS_NONE
 #else
   #define GC_PROBE_CHECK_MODE   GC_UPDATE_POS_TARGET
 #endif
@@ -177,7 +171,8 @@
 #define GC_PARSER_LASER_DISABLE         bit(6)
 #define GC_PARSER_LASER_ISMOTION        bit(7)
 
-
+/* Exported macro ------------------------------------------------------------*/
+/* Exported typedef ----------------------------------------------------------*/
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
 typedef struct {
   uint8_t motion;          // {G0,G1,G2,G3,G38.2,G80}
@@ -235,14 +230,14 @@ typedef struct {
   gc_values_t values;
 } parser_block_t;
 
+/* Exported variables --------------------------------------------------------*/
+/* Exported function ---------------------------------------------------------*/
+extern void gc_init(void);
+extern uint8_t gc_execute_line(char *line);
+extern void gc_sync_position(void);
 
-// Initialize the parser
-void gc_init();
 
-// Execute one block of rs275/ngc/g-code
-uint8_t gc_execute_line(char *line);
-
-// Set g-code parser position. Input in steps.
-void gc_sync_position();
-
-#endif
+#endif /* __GRBL_GCODE_H */
+/******************************************************************************
+      END FILE
+******************************************************************************/

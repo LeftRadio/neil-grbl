@@ -1,28 +1,23 @@
-/*
-  system.h - Header for system level commands and real-time processes
-  Part of Grbl
+/**
+  ******************************************************************************
+  * @file    system.h
+  * @author
+  * @version 1.0.0
+  * @date
+  * @brief
+  ******************************************************************************
+**/
 
-  Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __GRBL_SYSTEM_H
+#define __GRBL_SYSTEM_H
 
-  Grbl is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+/* Includes ------------------------------------------------------------------*/
+#include <stdint.h>
+#include "config.h"
+#include "nuts_bolts.h"
 
-  Grbl is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-#ifndef system_h
-#define system_h
-
-#include "grbl.h"
-
+/* Exported define -----------------------------------------------------------*/
 // Define system executor bit map. Used internally by realtime protocol as realtime command flags,
 // which notifies the main program to execute the specified realtime command asynchronously.
 // NOTE: The system executor uses an unsigned 8-bit volatile variable (8 flag limit.) The default
@@ -121,11 +116,12 @@
 #define SPINDLE_STOP_OVR_RESTORE        bit(2)
 #define SPINDLE_STOP_OVR_RESTORE_CYCLE  bit(3)
 
-
+/* Exported macro ------------------------------------------------------------*/
+/* Exported typedef ----------------------------------------------------------*/
 // Define global system variables
 typedef struct {
   uint8_t state;               // Tracks the current system state of Grbl.
-  uint8_t abort;               // System abort flag. Forces exit back to main loop for reset.             
+  uint8_t abort;               // System abort flag. Forces exit back to main loop for reset.
   uint8_t suspend;             // System suspend bitflag variable that manages holds, cancels, and safety door.
   uint8_t soft_limit;          // Tracks soft limit errors for the state machine. (boolean)
   uint8_t step_control;        // Governs the step segment generator depending on system state.
@@ -144,65 +140,49 @@ typedef struct {
     float spindle_speed;
   #endif
 } system_t;
-extern system_t sys;
 
-// NOTE: These position variables may need to be declared as volatiles, if problems arise.
+/* Exported variables --------------------------------------------------------*/
+extern system_t sys;
+/* NOTE: These position variables may need to be declared as volatiles, if problems arise */
 extern int32_t sys_position[N_AXIS];      // Real-time machine (aka home) position vector in steps.
 extern int32_t sys_probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
-
 extern volatile uint8_t sys_probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
 extern volatile uint8_t sys_rt_exec_state;   // Global realtime executor bitflag variable for state management. See EXEC bitmasks.
 extern volatile uint8_t sys_rt_exec_alarm;   // Global realtime executor bitflag variable for setting various alarms.
 extern volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor bitflag variable for motion-based overrides.
 extern volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bitflag variable for spindle/coolant overrides.
-
 #ifdef DEBUG
   #define EXEC_DEBUG_REPORT  bit(0)
   extern volatile uint8_t sys_rt_exec_debug;
 #endif
 
-// Initialize the serial protocol
-void system_init();
+/* Exported function ---------------------------------------------------------*/
+extern void system_init(void);
+extern uint8_t system_control_get_state(void);
+extern uint8_t system_check_safety_door_ajar(void);
+extern uint8_t system_execute_line(char *line);
+extern void system_execute_startup(char *line);
+extern void system_flag_wco_change(void);
+extern float system_convert_axis_steps_to_mpos(int32_t *steps, uint8_t idx);
+extern void system_convert_array_steps_to_mpos(float *position, int32_t *steps);
+extern uint8_t system_check_travel_limits(float *target);
+extern void system_set_exec_state_flag(uint8_t mask);
+extern void system_clear_exec_state_flag(uint8_t mask);
+extern void system_set_exec_alarm(uint8_t code);
+extern void system_clear_exec_alarm(void);
+extern void system_set_exec_motion_override_flag(uint8_t mask);
+extern void system_set_exec_accessory_override_flag(uint8_t mask);
+extern void system_clear_exec_motion_overrides(void);
+extern void system_clear_exec_accessory_overrides(void);
 
-// Returns bitfield of control pin states, organized by CONTROL_PIN_INDEX. (1=triggered, 0=not triggered).
-uint8_t system_control_get_state();
-
-// Returns if safety door is open or closed, based on pin state.
-uint8_t system_check_safety_door_ajar();
-
-// Executes an internal system command, defined as a string starting with a '$'
-uint8_t system_execute_line(char *line);
-
-// Execute the startup script lines stored in EEPROM upon initialization
-void system_execute_startup(char *line);
-
-
-void system_flag_wco_change();
-
-// Returns machine position of axis 'idx'. Must be sent a 'step' array.
-float system_convert_axis_steps_to_mpos(int32_t *steps, uint8_t idx);
-
-// Updates a machine 'position' array based on the 'step' array sent.
-void system_convert_array_steps_to_mpos(float *position, int32_t *steps);
-
-// CoreXY calculation only. Returns x or y-axis "steps" based on CoreXY motor steps.
+/* CoreXY calculation only, returns x or y-axis "steps" based on CoreXY motor steps */
 #ifdef COREXY
-  int32_t system_convert_corexy_to_x_axis_steps(int32_t *steps);
-  int32_t system_convert_corexy_to_y_axis_steps(int32_t *steps);
+  extern int32_t system_convert_corexy_to_x_axis_steps(int32_t *steps);
+  extern int32_t system_convert_corexy_to_y_axis_steps(int32_t *steps);
 #endif
 
-// Checks and reports if target array exceeds machine travel limits.
-uint8_t system_check_travel_limits(float *target);
 
-// Special handlers for setting and clearing Grbl's real-time execution flags.
-void system_set_exec_state_flag(uint8_t mask);
-void system_clear_exec_state_flag(uint8_t mask);
-void system_set_exec_alarm(uint8_t code);
-void system_clear_exec_alarm();
-void system_set_exec_motion_override_flag(uint8_t mask);
-void system_set_exec_accessory_override_flag(uint8_t mask);
-void system_clear_exec_motion_overrides();
-void system_clear_exec_accessory_overrides();
-
-
-#endif
+#endif /* __GRBL_JOG_H */
+/******************************************************************************
+      END FILE
+******************************************************************************/

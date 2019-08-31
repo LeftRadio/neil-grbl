@@ -1,7 +1,7 @@
 /*
   ******************************************************************************
   * @file     print.c
-  * @author   leftradio
+  * @author
   * @version  1.0.0
   * @date
   * @brief
@@ -9,9 +9,12 @@
 **/
 
 /* Includes ------------------------------------------------------------------*/
-#include "grbl.h"
+#include "settings.h"
+#include "serial.h"
 #include "print.h"
+#include "config.h"
 #include "hal_abstract.h"
+#include "nuts_bolts.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/

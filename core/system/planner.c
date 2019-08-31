@@ -1,62 +1,12 @@
-/*
-  planner.c - buffers movement commands and manages the acceleration profile plan
-  Part of Grbl
-
-  Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
-  Copyright (c) 2009-2011 Simen Svale Skogsrud
-  Copyright (c) 2011 Jens Geisler
-
-  Grbl is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  Grbl is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-#include "grbl.h"
-
-
-static plan_block_t block_buffer[BLOCK_BUFFER_SIZE];  // A ring buffer for motion instructions
-static uint8_t block_buffer_tail;     // Index of the block to process now
-static uint8_t block_buffer_head;     // Index of the next block to be pushed
-static uint8_t next_buffer_head;      // Index of the next buffer head
-static uint8_t block_buffer_planned;  // Index of the optimally planned block
-
-// Define planner variables
-typedef struct {
-  int32_t position[N_AXIS];          // The planner position of the tool in absolute steps. Kept separate
-                                     // from g-code position for movements requiring multiple line motions,
-                                     // i.e. arcs, canned cycles, and backlash compensation.
-  float previous_unit_vec[N_AXIS];   // Unit vector of previous path line segment
-  float previous_nominal_speed;  // Nominal speed of previous path line segment
-} planner_t;
-static planner_t pl;
-
-
-// Returns the index of the next block in the ring buffer. Also called by stepper segment buffer.
-uint8_t plan_next_block_index(uint8_t block_index)
-{
-  block_index++;
-  if (block_index == BLOCK_BUFFER_SIZE) { block_index = 0; }
-  return(block_index);
-}
-
-
-// Returns the index of the previous block in the ring buffer
-static uint8_t plan_prev_block_index(uint8_t block_index)
-{
-  if (block_index == 0) { block_index = BLOCK_BUFFER_SIZE; }
-  block_index--;
-  return(block_index);
-}
-
+/**
+  ******************************************************************************
+  * @file    planner.c
+  * @author
+  * @version 1.0.0
+  * @date
+  * @brief
+  ******************************************************************************
+**/
 
 /*                            PLANNER SPEED DEFINITION
                                      +--------+   <- current->nominal_speed
@@ -123,198 +73,296 @@ static uint8_t plan_prev_block_index(uint8_t block_index)
   ARM versions should have enough memory and speed for look-ahead blocks numbering up to a hundred or more.
 
 */
-static void planner_recalculate()
-{
-  // Initialize block index to the last block in the planner buffer.
-  uint8_t block_index = plan_prev_block_index(block_buffer_head);
 
-  // Bail. Can't do anything with one only one plan-able block.
-  if (block_index == block_buffer_planned) { return; }
+/* Includes ------------------------------------------------------------------*/
+#include <math.h>
+#include <string.h>
+#include <stdlib.h>
+#include "planner.h"
+#include "settings.h"
+#include "system.h"
+#include "stepper.h"
+#include "gcode.h"
 
-  // Reverse Pass: Coarsely maximize all possible deceleration curves back-planning from the last
-  // block in buffer. Cease planning when the last optimal planned or tail pointer is reached.
-  // NOTE: Forward pass will later refine and correct the reverse pass to create an optimal plan.
-  float entry_speed_sqr;
-  plan_block_t *next;
-  plan_block_t *current = &block_buffer[block_index];
+/* Private typedef -----------------------------------------------------------*/
+// Define planner variables
+typedef struct {
+  int32_t position[N_AXIS];          // The planner position of the tool in absolute steps. Kept separate
+                                     // from g-code position for movements requiring multiple line motions,
+                                     // i.e. arcs, canned cycles, and backlash compensation.
+  float previous_unit_vec[N_AXIS];   // Unit vector of previous path line segment
+  float previous_nominal_speed;  // Nominal speed of previous path line segment
+} planner_t;
+static planner_t pl;
 
-  // Calculate maximum entry speed for last block in buffer, where the exit speed is always zero.
-  current->entry_speed_sqr = min( current->max_entry_speed_sqr, 2*current->acceleration*current->millimeters);
+/* Private define ------------------------------------------------------------*/
+/* Private macro -------------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/
+static plan_block_t block_buffer[BLOCK_BUFFER_SIZE];  // A ring buffer for motion instructions
+static uint8_t block_buffer_tail;     // Index of the block to process now
+static uint8_t block_buffer_head;     // Index of the next block to be pushed
+static uint8_t next_buffer_head;      // Index of the next buffer head
+static uint8_t block_buffer_planned;  // Index of the optimally planned block
 
-  block_index = plan_prev_block_index(block_index);
-  if (block_index == block_buffer_planned) { // Only two plannable blocks in buffer. Reverse pass complete.
-    // Check if the first block is the tail. If so, notify stepper to update its current parameters.
-    if (block_index == block_buffer_tail) { stepper_update_plan_block_parameters(); }
-  } else { // Three or more plan-able blocks
-    while (block_index != block_buffer_planned) {
-      next = current;
-      current = &block_buffer[block_index];
-      block_index = plan_prev_block_index(block_index);
+/* Private function prototypes -----------------------------------------------*/
+/* Extern function -----------------------------------------------------------*/
+/* Private Functions ---------------------------------------------------------*/
 
-      // Check if next block is the tail block(=planned block). If so, update current stepper parameters.
+/**
+  * @brief  Returns the index of the previous block in the ring buffer
+  * @param  uint8_t block_index
+  * @retval uint8_t new block index
+  */
+static uint8_t plan_prev_block_index(uint8_t block_index) {
+    if (block_index == 0) { block_index = BLOCK_BUFFER_SIZE; }
+    block_index--;
+    return(block_index);
+}
+
+/**
+  * @brief  planner_recalculate
+  * @param  None
+  * @retval None
+  */
+static void planner_recalculate(void) {
+    // Initialize block index to the last block in the planner buffer.
+    uint8_t block_index = plan_prev_block_index(block_buffer_head);
+
+    // Bail. Can't do anything with one only one plan-able block.
+    if (block_index == block_buffer_planned) { return; }
+
+    // Reverse Pass: Coarsely maximize all possible deceleration curves back-planning from the last
+    // block in buffer. Cease planning when the last optimal planned or tail pointer is reached.
+    // NOTE: Forward pass will later refine and correct the reverse pass to create an optimal plan.
+    float entry_speed_sqr;
+    plan_block_t *next;
+    plan_block_t *current = &block_buffer[block_index];
+
+    // Calculate maximum entry speed for last block in buffer, where the exit speed is always zero.
+    current->entry_speed_sqr = min( current->max_entry_speed_sqr, 2*current->acceleration*current->millimeters);
+
+    block_index = plan_prev_block_index(block_index);
+    if (block_index == block_buffer_planned) { // Only two plannable blocks in buffer. Reverse pass complete.
+      // Check if the first block is the tail. If so, notify stepper to update its current parameters.
       if (block_index == block_buffer_tail) { stepper_update_plan_block_parameters(); }
+    } else { // Three or more plan-able blocks
+      while (block_index != block_buffer_planned) {
+        next = current;
+        current = &block_buffer[block_index];
+        block_index = plan_prev_block_index(block_index);
 
-      // Compute maximum entry speed decelerating over the current block from its exit speed.
-      if (current->entry_speed_sqr != current->max_entry_speed_sqr) {
-        entry_speed_sqr = next->entry_speed_sqr + 2*current->acceleration*current->millimeters;
-        if (entry_speed_sqr < current->max_entry_speed_sqr) {
-          current->entry_speed_sqr = entry_speed_sqr;
-        } else {
-          current->entry_speed_sqr = current->max_entry_speed_sqr;
+        // Check if next block is the tail block(=planned block). If so, update current stepper parameters.
+        if (block_index == block_buffer_tail) { stepper_update_plan_block_parameters(); }
+
+        // Compute maximum entry speed decelerating over the current block from its exit speed.
+        if (current->entry_speed_sqr != current->max_entry_speed_sqr) {
+          entry_speed_sqr = next->entry_speed_sqr + 2*current->acceleration*current->millimeters;
+          if (entry_speed_sqr < current->max_entry_speed_sqr) {
+            current->entry_speed_sqr = entry_speed_sqr;
+          } else {
+            current->entry_speed_sqr = current->max_entry_speed_sqr;
+          }
         }
       }
     }
-  }
 
-  // Forward Pass: Forward plan the acceleration curve from the planned pointer onward.
-  // Also scans for optimal plan breakpoints and appropriately updates the planned pointer.
-  next = &block_buffer[block_buffer_planned]; // Begin at buffer planned pointer
-  block_index = plan_next_block_index(block_buffer_planned);
-  while (block_index != block_buffer_head) {
-    current = next;
-    next = &block_buffer[block_index];
+    // Forward Pass: Forward plan the acceleration curve from the planned pointer onward.
+    // Also scans for optimal plan breakpoints and appropriately updates the planned pointer.
+    next = &block_buffer[block_buffer_planned]; // Begin at buffer planned pointer
+    block_index = plan_next_block_index(block_buffer_planned);
+    while (block_index != block_buffer_head) {
+      current = next;
+      next = &block_buffer[block_index];
 
-    // Any acceleration detected in the forward pass automatically moves the optimal planned
-    // pointer forward, since everything before this is all optimal. In other words, nothing
-    // can improve the plan from the buffer tail to the planned pointer by logic.
-    if (current->entry_speed_sqr < next->entry_speed_sqr) {
-      entry_speed_sqr = current->entry_speed_sqr + 2*current->acceleration*current->millimeters;
-      // If true, current block is full-acceleration and we can move the planned pointer forward.
-      if (entry_speed_sqr < next->entry_speed_sqr) {
-        next->entry_speed_sqr = entry_speed_sqr; // Always <= max_entry_speed_sqr. Backward pass sets this.
-        block_buffer_planned = block_index; // Set optimal plan pointer.
+      // Any acceleration detected in the forward pass automatically moves the optimal planned
+      // pointer forward, since everything before this is all optimal. In other words, nothing
+      // can improve the plan from the buffer tail to the planned pointer by logic.
+      if (current->entry_speed_sqr < next->entry_speed_sqr) {
+        entry_speed_sqr = current->entry_speed_sqr + 2*current->acceleration*current->millimeters;
+        // If true, current block is full-acceleration and we can move the planned pointer forward.
+        if (entry_speed_sqr < next->entry_speed_sqr) {
+          next->entry_speed_sqr = entry_speed_sqr; // Always <= max_entry_speed_sqr. Backward pass sets this.
+          block_buffer_planned = block_index; // Set optimal plan pointer.
+        }
       }
+
+      // Any block set at its maximum entry speed also creates an optimal plan up to this
+      // point in the buffer. When the plan is bracketed by either the beginning of the
+      // buffer and a maximum entry speed or two maximum entry speeds, every block in between
+      // cannot logically be further improved. Hence, we don't have to recompute them anymore.
+      if (next->entry_speed_sqr == next->max_entry_speed_sqr) { block_buffer_planned = block_index; }
+      block_index = plan_next_block_index( block_index );
     }
-
-    // Any block set at its maximum entry speed also creates an optimal plan up to this
-    // point in the buffer. When the plan is bracketed by either the beginning of the
-    // buffer and a maximum entry speed or two maximum entry speeds, every block in between
-    // cannot logically be further improved. Hence, we don't have to recompute them anymore.
-    if (next->entry_speed_sqr == next->max_entry_speed_sqr) { block_buffer_planned = block_index; }
-    block_index = plan_next_block_index( block_index );
-  }
 }
 
-
-void plan_reset()
-{
-  memset(&pl, 0, sizeof(planner_t)); // Clear planner struct
-  plan_reset_buffer();
+/**
+  * @brief  Computes and updates the max entry speed (sqr) of the block, based on the minimum of the junction's
+            previous and current nominal speeds and max junction speed.
+  * @param  plan_block_t *block, float nominal_speed, float prev_nominal_spee
+  * @retval None
+  */
+static void plan_compute_profile_parameters(plan_block_t *block, float nominal_speed, float prev_nominal_speed) {
+    /* compute the junction maximum entry based on the minimum of the junction speed and neighboring nominal speeds */
+    if (nominal_speed > prev_nominal_speed) { block->max_entry_speed_sqr = prev_nominal_speed*prev_nominal_speed; }
+    else { block->max_entry_speed_sqr = nominal_speed*nominal_speed; }
+    if (block->max_entry_speed_sqr > block->max_junction_speed_sqr) { block->max_entry_speed_sqr = block->max_junction_speed_sqr; }
 }
 
+/* Exported Functions --------------------------------------------------------*/
 
-void plan_reset_buffer()
-{
-  block_buffer_tail = 0;
-  block_buffer_head = 0; // Empty = tail
-  next_buffer_head = 1; // plan_next_block_index(block_buffer_head)
-  block_buffer_planned = 0; // = block_buffer_tail;
+/**
+  * @brief  Returns the index of the next block in the ring buffer. Also called by stepper segment buffer
+  * @param  uint8_t block_index
+  * @retval uint8_t new block index
+  */
+uint8_t plan_next_block_index(uint8_t block_index) {
+    block_index++;
+    if (block_index == BLOCK_BUFFER_SIZE) { block_index = 0; }
+    return(block_index);
 }
 
-
-void plan_discard_current_block()
-{
-  if (block_buffer_head != block_buffer_tail) { // Discard non-empty buffer.
-    uint8_t block_index = plan_next_block_index( block_buffer_tail );
-    // Push block_buffer_planned pointer, if encountered.
-    if (block_buffer_tail == block_buffer_planned) { block_buffer_planned = block_index; }
-    block_buffer_tail = block_index;
-  }
+/**
+  * @brief  plan_reset
+  * @param  None
+  * @retval None
+  */
+void plan_reset(void) {
+    memset(&pl, 0, sizeof(planner_t)); // Clear planner struct
+    plan_reset_buffer();
 }
 
-
-// Returns address of planner buffer block used by system motions. Called by segment generator.
-plan_block_t *plan_get_system_motion_block()
-{
-  return(&block_buffer[block_buffer_head]);
+/**
+  * @brief  plan_reset_buffer
+  * @param  None
+  * @retval None
+  */
+void plan_reset_buffer(void) {
+    block_buffer_tail = 0;
+    block_buffer_head = 0; // Empty = tail
+    next_buffer_head = 1; // plan_next_block_index(block_buffer_head)
+    block_buffer_planned = 0; // = block_buffer_tail;
 }
 
-
-// Returns address of first planner block, if available. Called by various main program functions.
-plan_block_t *plan_get_current_block()
-{
-  if (block_buffer_head == block_buffer_tail) { return(NULL); } // Buffer empty
-  return(&block_buffer[block_buffer_tail]);
+/**
+  * @brief  plan_discard_current_block
+  * @param  None
+  * @retval None
+  */
+void plan_discard_current_block(void) {
+    if (block_buffer_head != block_buffer_tail) { // Discard non-empty buffer.
+        uint8_t block_index = plan_next_block_index( block_buffer_tail );
+        // Push block_buffer_planned pointer, if encountered.
+        if (block_buffer_tail == block_buffer_planned) { block_buffer_planned = block_index; }
+        block_buffer_tail = block_index;
+    }
 }
 
-
-float plan_get_exec_block_exit_speed_sqr()
-{
-  uint8_t block_index = plan_next_block_index(block_buffer_tail);
-  if (block_index == block_buffer_head) { return( 0.0 ); }
-  return( block_buffer[block_index].entry_speed_sqr );
+/**
+  * @brief  Returns address of planner buffer block used by system motions. Called by segment generator.
+  * @param  None
+  * @retval plan_block_t pointer
+  */
+plan_block_t *plan_get_system_motion_block(void) {
+    return(&block_buffer[block_buffer_head]);
 }
 
-
-// Returns the availability status of the block ring buffer. True, if full.
-uint8_t plan_check_full_buffer()
-{
-  if (block_buffer_tail == next_buffer_head) { return(true); }
-  return(false);
+/**
+  * @brief  Returns address of first planner block, if available. Called by various main program functions.
+  * @param  None
+  * @retval plan_block_t pointer
+  */
+plan_block_t *plan_get_current_block(void) {
+    /* buffer empty */
+    if (block_buffer_head == block_buffer_tail) {
+      return (void*)0;
+    }
+    /* */
+    return &block_buffer[block_buffer_tail];
 }
 
-
-// Computes and returns block nominal speed based on running condition and override values.
-// NOTE: All system motion commands, such as homing/parking, are not subject to overrides.
-float plan_compute_profile_nominal_speed(plan_block_t *block)
-{
-  float nominal_speed = block->programmed_rate;
-  if (block->condition & PL_COND_FLAG_RAPID_MOTION) { nominal_speed *= (0.01*sys.r_override); }
-  else {
-    if (!(block->condition & PL_COND_FLAG_NO_FEED_OVERRIDE)) { nominal_speed *= (0.01*sys.f_override); }
-    if (nominal_speed > block->rapid_rate) { nominal_speed = block->rapid_rate; }
-  }
-  if (nominal_speed > MINIMUM_FEED_RATE) { return(nominal_speed); }
-  return(MINIMUM_FEED_RATE);
+/**
+  * @brief  plan_get_exec_block_exit_speed_sqr
+  * @param  None
+  * @retval float speed sqr
+  */
+float plan_get_exec_block_exit_speed_sqr(void) {
+    uint8_t block_index = plan_next_block_index(block_buffer_tail);
+    if (block_index == block_buffer_head) { return( 0.0 ); }
+    return( block_buffer[block_index].entry_speed_sqr );
 }
 
-
-// Computes and updates the max entry speed (sqr) of the block, based on the minimum of the junction's
-// previous and current nominal speeds and max junction speed.
-static void plan_compute_profile_parameters(plan_block_t *block, float nominal_speed, float prev_nominal_speed)
-{
-  // Compute the junction maximum entry based on the minimum of the junction speed and neighboring nominal speeds.
-  if (nominal_speed > prev_nominal_speed) { block->max_entry_speed_sqr = prev_nominal_speed*prev_nominal_speed; }
-  else { block->max_entry_speed_sqr = nominal_speed*nominal_speed; }
-  if (block->max_entry_speed_sqr > block->max_junction_speed_sqr) { block->max_entry_speed_sqr = block->max_junction_speed_sqr; }
+/**
+  * @brief  Returns the availability status of the block ring buffer. True, if full.
+  * @param  None
+  * @retval uint8_t
+  */
+uint8_t plan_check_full_buffer(void) {
+    if (block_buffer_tail == next_buffer_head) return true;
+    return false;
 }
 
-
-// Re-calculates buffered motions profile parameters upon a motion-based override change.
-void plan_update_velocity_profile_parameters()
-{
-  uint8_t block_index = block_buffer_tail;
-  plan_block_t *block;
-  float nominal_speed;
-  float prev_nominal_speed = SOME_LARGE_VALUE; // Set high for first block nominal speed calculation.
-  while (block_index != block_buffer_head) {
-    block = &block_buffer[block_index];
-    nominal_speed = plan_compute_profile_nominal_speed(block);
-    plan_compute_profile_parameters(block, nominal_speed, prev_nominal_speed);
-    prev_nominal_speed = nominal_speed;
-    block_index = plan_next_block_index(block_index);
-  }
-  pl.previous_nominal_speed = prev_nominal_speed; // Update prev nominal speed for next incoming block.
+/**
+  * @brief  Computes and returns block nominal speed based on running condition and override values.
+            NOTE: All system motion commands, such as homing/parking, are not subject to overrides.
+  * @param  plan_block_t *block
+  * @retval float
+  */
+float plan_compute_profile_nominal_speed(plan_block_t *block) {
+    /* */
+    float nominal_speed = block->programmed_rate;
+    /* */
+    if (block->condition & PL_COND_FLAG_RAPID_MOTION) { nominal_speed *= (0.01 * sys.r_override); }
+    else {
+        if (!(block->condition & PL_COND_FLAG_NO_FEED_OVERRIDE)) { nominal_speed *= (0.01*sys.f_override); }
+        if (nominal_speed > block->rapid_rate) { nominal_speed = block->rapid_rate; }
+    }
+    /* */
+    if (nominal_speed > MINIMUM_FEED_RATE) { return(nominal_speed); }
+    return(MINIMUM_FEED_RATE);
 }
 
+/**
+  * @brief  Re-calculates buffered motions profile parameters upon a motion-based override change.
+  * @param  None
+  * @retval None
+  */
+void plan_update_velocity_profile_parameters(void) {
+    uint8_t block_index = block_buffer_tail;
+    plan_block_t *block;
+    float nominal_speed;
+    /* set high for first block nominal speed calculation */
+    float prev_nominal_speed = SOME_LARGE_VALUE;
+    while (block_index != block_buffer_head) {
+        block = &block_buffer[block_index];
+        nominal_speed = plan_compute_profile_nominal_speed(block);
+        plan_compute_profile_parameters(block, nominal_speed, prev_nominal_speed);
+        prev_nominal_speed = nominal_speed;
+        block_index = plan_next_block_index(block_index);
+    }
+    /* update prev nominal speed for next incoming block */
+    pl.previous_nominal_speed = prev_nominal_speed;
+}
 
-/* Add a new linear movement to the buffer. target[N_AXIS] is the signed, absolute target position
-   in millimeters. Feed rate specifies the speed of the motion. If feed rate is inverted, the feed
-   rate is taken to mean "frequency" and would complete the operation in 1/feed_rate minutes.
-   All position data passed to the planner must be in terms of machine position to keep the planner
-   independent of any coordinate system changes and offsets, which are handled by the g-code parser.
-   NOTE: Assumes buffer is available. Buffer checks are handled at a higher level by motion_control.
-   In other words, the buffer head is never equal to the buffer tail.  Also the feed rate input value
-   is used in three ways: as a normal feed rate if invert_feed_rate is false, as inverse time if
-   invert_feed_rate is true, or as seek/rapids rate if the feed_rate value is negative (and
-   invert_feed_rate always false).
-   The system motion condition tells the planner to plan a motion in the always unused block buffer
-   head. It avoids changing the planner state and preserves the buffer to ensure subsequent gcode
-   motions are still planned correctly, while the stepper module only points to the block buffer head
-   to execute the special system motion. */
-uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
-{
-  // Prepare and initialize new block. Copy relevant pl_data for block execution.
+/**
+  * @brief  Add a new linear movement to the buffer. target[N_AXIS] is the signed, absolute target position
+            in millimeters. Feed rate specifies the speed of the motion. If feed rate is inverted, the feed
+            rate is taken to mean "frequency" and would complete the operation in 1/feed_rate minutes.
+            All position data passed to the planner must be in terms of machine position to keep the planner
+            independent of any coordinate system changes and offsets, which are handled by the g-code parser.
+            NOTE: Assumes buffer is available. Buffer checks are handled at a higher level by motion_control.
+            In other words, the buffer head is never equal to the buffer tail.  Also the feed rate input value
+            is used in three ways: as a normal feed rate if invert_feed_rate is false, as inverse time if
+            invert_feed_rate is true, or as seek/rapids rate if the feed_rate value is negative (and
+            invert_feed_rate always false).
+            The system motion condition tells the planner to plan a motion in the always unused block buffer
+            head. It avoids changing the planner state and preserves the buffer to ensure subsequent gcode
+            motions are still planned correctly, while the stepper module only points to the block buffer head
+            to execute the special system motion.
+  * @param  float *target, plan_line_data_t *pl_data
+  * @retval uint8_t
+  */
+uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data) {
+  /* prepare and initialize new block, copy relevant pl_data for block execution */
   plan_block_t *block = &block_buffer[block_buffer_head];
   memset(block,0,sizeof(plan_block_t)); // Zero all block values.
   block->condition = pl_data->condition;
@@ -324,13 +372,11 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
   #ifdef USE_LINE_NUMBERS
     block->line_number = pl_data->line_number;
   #endif
-
-  // Compute and store initial move distance data.
+  /* compute and store initial move distance data */
   int32_t target_steps[N_AXIS], position_steps[N_AXIS];
   float unit_vec[N_AXIS], delta_mm;
   uint8_t idx;
-
-  // Copy position data based on type of motion being planned.
+  /* copy position data based on type of motion being planned */
   if (block->condition & PL_COND_FLAG_SYSTEM_MOTION) {
     #ifdef COREXY
       position_steps[X_AXIS] = system_convert_corexy_to_x_axis_steps(sys_position);
@@ -473,52 +519,71 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
   return(PLAN_OK);
 }
 
+/**
+  * @brief  Reset the planner position vectors. Called by the system abort/initialization routine.
+  * @param  None
+  * @retval None
+  */
+void plan_sync_position(void) {
+    /* for motor configurations not in the same coordinate frame as the machine position,
+       this function needs to be updated to accomodate the difference */
+    uint8_t idx;
+    for (idx=0; idx<N_AXIS; idx++) {
+        #ifdef COREXY
+          if (idx==X_AXIS) {
+              pl.position[X_AXIS] = system_convert_corexy_to_x_axis_steps(sys_position);
+          }
+          else if (idx==Y_AXIS) {
+              pl.position[Y_AXIS] = system_convert_corexy_to_y_axis_steps(sys_position);
+          }
+          else {
+              pl.position[idx] = sys_position[idx];
+          }
+        #else
+          pl.position[idx] = sys_position[idx];
+        #endif
+    }
+}
 
-// Reset the planner position vectors. Called by the system abort/initialization routine.
-void plan_sync_position()
-{
-  // TODO: For motor configurations not in the same coordinate frame as the machine position,
-  // this function needs to be updated to accomodate the difference.
-  uint8_t idx;
-  for (idx=0; idx<N_AXIS; idx++) {
-    #ifdef COREXY
-      if (idx==X_AXIS) {
-        pl.position[X_AXIS] = system_convert_corexy_to_x_axis_steps(sys_position);
-      } else if (idx==Y_AXIS) {
-        pl.position[Y_AXIS] = system_convert_corexy_to_y_axis_steps(sys_position);
-      } else {
-        pl.position[idx] = sys_position[idx];
-      }
-    #else
-      pl.position[idx] = sys_position[idx];
-    #endif
-  }
+/**
+  * @brief  Returns the number of available blocks are in the planner buffer
+  * @param  None
+  * @retval None
+  */
+uint8_t plan_get_block_buffer_available(void) {
+    if (block_buffer_head >= block_buffer_tail) {
+       return (BLOCK_BUFFER_SIZE - 1) - (block_buffer_head - block_buffer_tail);
+    }
+    return block_buffer_tail - block_buffer_head - 1;
+}
+
+/**
+  * @brief  Returns the number of active blocks are in the planner buffer.
+            NOTE: Deprecated. Not used unless classic status reports are enabled in config.h
+  * @param  None
+  * @retval None
+  */
+uint8_t plan_get_block_buffer_count(void) {
+    if (block_buffer_head >= block_buffer_tail) {
+        return block_buffer_head - block_buffer_tail;
+    }
+    return BLOCK_BUFFER_SIZE - (block_buffer_tail-block_buffer_head);
+}
+
+/**
+  * @brief  Re-initialize buffer plan with a partially completed block, assumed to exist at the buffer tail.
+            Called after a steppers have come to a complete stop for a feed hold and the cycle is stopped.
+  * @param  None
+  * @retval None
+  */
+void plan_cycle_reinitialize(void) {
+    /* re-plan from a complete stop, reset planner entry speeds and buffer planned pointer */
+    stepper_update_plan_block_parameters();
+    block_buffer_planned = block_buffer_tail;
+    planner_recalculate();
 }
 
 
-// Returns the number of available blocks are in the planner buffer.
-uint8_t plan_get_block_buffer_available()
-{
-  if (block_buffer_head >= block_buffer_tail) { return((BLOCK_BUFFER_SIZE-1)-(block_buffer_head-block_buffer_tail)); }
-  return((block_buffer_tail-block_buffer_head-1));
-}
-
-
-// Returns the number of active blocks are in the planner buffer.
-// NOTE: Deprecated. Not used unless classic status reports are enabled in config.h
-uint8_t plan_get_block_buffer_count()
-{
-  if (block_buffer_head >= block_buffer_tail) { return(block_buffer_head-block_buffer_tail); }
-  return(BLOCK_BUFFER_SIZE - (block_buffer_tail-block_buffer_head));
-}
-
-
-// Re-initialize buffer plan with a partially completed block, assumed to exist at the buffer tail.
-// Called after a steppers have come to a complete stop for a feed hold and the cycle is stopped.
-void plan_cycle_reinitialize()
-{
-  // Re-plan from a complete stop. Reset planner entry speeds and buffer planned pointer.
-  stepper_update_plan_block_parameters();
-  block_buffer_planned = block_buffer_tail;
-  planner_recalculate();
-}
+/******************************************************************************
+      END FILE
+******************************************************************************/

@@ -14,7 +14,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
-#include "grbl.h"
+#include "planner.h"
+#include "settings.h"
+#include "config.h"
+#include "nuts_bolts.h"
 
 /* Exported define -----------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
@@ -91,7 +94,7 @@ typedef struct _stepper_t {
     uint8_t exec_block_index;     // Tracks the current st_block index. Change indicates new block.
     st_block_t *exec_block;       // Pointer to the block data for the segment being executed
     segment_t *exec_segment;      // Pointer to the segment being executed
-    volatile bool busy;           // Used to avoid ISR nesting of the "Stepper Driver Interrupt"
+    volatile bool_g busy;           // Used to avoid ISR nesting of the "Stepper Driver Interrupt"
 } stepper_t;
 
 /* segment preparation data struct. Contains all the necessary information

@@ -27,6 +27,7 @@
 
 #ifndef config_h
 #define config_h
+
 // #include "grbl.h" // For Arduino IDE compatibility.
 
 
@@ -256,6 +257,15 @@
 #define SPINDLE_OVERRIDE_COARSE_INCREMENT  10 // (1-99). Usually 10%.
 #define SPINDLE_OVERRIDE_FINE_INCREMENT     1 // (1-99). Usually 1%.
 
+// Variable spindle configuration below. Do not change unless you know what you are doing.
+// NOTE: Only used when variable spindle is enabled.
+#define SPINDLE_PWM_MAX_VALUE               ((uint8_t)255)
+#define SPINDLE_PWM_MIN_VALUE               1
+#define SPINDLE_PWM_OFF_VALUE               ((uint8_t)0)
+#define SPINDLE_PWM_RANGE                   ((uint8_t)(SPINDLE_PWM_MAX_VALUE - SPINDLE_PWM_MIN_VALUE))
+
+#define SPINDLE_PWM_BIT                     ((uint8_t)0)
+
 // When a M2 or M30 program end command is executed, most g-code states are restored to their defaults.
 // This compile-time option includes the restoring of the feed, rapid, and spindle speed override values
 // to their default values at program end.
@@ -384,6 +394,30 @@
 // re-enable when spindle speed is greater than zero. This option does that.
 // NOTE: Requires USE_SPINDLE_DIR_AS_ENABLE_PIN to be enabled.
 // #define SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED // Default disabled. Uncomment to enable.
+
+// Enables a piecewise linear model of the spindle PWM/speed output. Requires a solution by the
+// 'fit_nonlinear_spindle.py' script in the /doc/script folder of the repo. See file comments
+// on how to gather spindle data and run the script to generate a solution.
+// #define ENABLE_PIECEWISE_LINEAR_SPINDLE  // Default disabled. Uncomment to enable.
+
+// N_PIECES, RPM_MAX, RPM_MIN, RPM_POINTxx, and RPM_LINE_XX constants are all set and given by
+// the 'fit_nonlinear_spindle.py' script solution. Used only when ENABLE_PIECEWISE_LINEAR_SPINDLE
+// is enabled. Make sure the constant values are exactly the same as the script solution.
+// NOTE: When N_PIECES < 4, unused RPM_LINE and RPM_POINT defines are not required and omitted.
+// #define N_PIECES 4  // Integer (1-4). Number of piecewise lines used in script solution.
+// #define RPM_MAX  11686.4  // Max RPM of model. $30 > RPM_MAX will be limited to RPM_MAX.
+// #define RPM_MIN  202.5    // Min RPM of model. $31 < RPM_MIN will be limited to RPM_MIN.
+// #define RPM_POINT12  6145.4  // Used N_PIECES >=2. Junction point between lines 1 and 2.
+// #define RPM_POINT23  9627.8  // Used N_PIECES >=3. Junction point between lines 2 and 3.
+// #define RPM_POINT34  10813.9 // Used N_PIECES = 4. Junction point between lines 3 and 4.
+// #define RPM_LINE_A1  3.197101e-03  // Used N_PIECES >=1. A and B constants of line 1.
+// #define RPM_LINE_B1  -3.526076e-1
+// #define RPM_LINE_A2  1.722950e-2   // Used N_PIECES >=2. A and B constants of line 2.
+// #define RPM_LINE_B2  8.588176e+01
+// #define RPM_LINE_A3  5.901518e-02  // Used N_PIECES >=3. A and B constants of line 3.
+// #define RPM_LINE_B3  4.881851e+02
+// #define RPM_LINE_A4  1.203413e-01  // Used N_PIECES = 4. A and B constants of line 4.
+// #define RPM_LINE_B4  1.151360e+03
 
 // With this enabled, Grbl sends back an echo of the line it has received, which has been pre-parsed (spaces
 // removed, capitalized letters, no comments) and is to be immediately executed by Grbl. Echoes will not be
@@ -604,29 +638,7 @@
 // to ensure the laser doesn't inadvertently remain powered while at a stop and cause a fire.
 #define DISABLE_LASER_DURING_HOLD // Default enabled. Comment to disable.
 
-// Enables a piecewise linear model of the spindle PWM/speed output. Requires a solution by the
-// 'fit_nonlinear_spindle.py' script in the /doc/script folder of the repo. See file comments
-// on how to gather spindle data and run the script to generate a solution.
-// #define ENABLE_PIECEWISE_LINEAR_SPINDLE  // Default disabled. Uncomment to enable.
 
-// N_PIECES, RPM_MAX, RPM_MIN, RPM_POINTxx, and RPM_LINE_XX constants are all set and given by
-// the 'fit_nonlinear_spindle.py' script solution. Used only when ENABLE_PIECEWISE_LINEAR_SPINDLE
-// is enabled. Make sure the constant values are exactly the same as the script solution.
-// NOTE: When N_PIECES < 4, unused RPM_LINE and RPM_POINT defines are not required and omitted.
-#define N_PIECES 4  // Integer (1-4). Number of piecewise lines used in script solution.
-#define RPM_MAX  11686.4  // Max RPM of model. $30 > RPM_MAX will be limited to RPM_MAX.
-#define RPM_MIN  202.5    // Min RPM of model. $31 < RPM_MIN will be limited to RPM_MIN.
-#define RPM_POINT12  6145.4  // Used N_PIECES >=2. Junction point between lines 1 and 2.
-#define RPM_POINT23  9627.8  // Used N_PIECES >=3. Junction point between lines 2 and 3.
-#define RPM_POINT34  10813.9 // Used N_PIECES = 4. Junction point between lines 3 and 4.
-#define RPM_LINE_A1  3.197101e-03  // Used N_PIECES >=1. A and B constants of line 1.
-#define RPM_LINE_B1  -3.526076e-1
-#define RPM_LINE_A2  1.722950e-2   // Used N_PIECES >=2. A and B constants of line 2.
-#define RPM_LINE_B2  8.588176e+01
-#define RPM_LINE_A3  5.901518e-02  // Used N_PIECES >=3. A and B constants of line 3.
-#define RPM_LINE_B3  4.881851e+02
-#define RPM_LINE_A4  1.203413e-01  // Used N_PIECES = 4. A and B constants of line 4.
-#define RPM_LINE_B4  1.151360e+03
 
 
 /* ---------------------------------------------------------------------------------------
@@ -642,5 +654,51 @@
 
 // Paste default settings definitions here.
 
+#ifndef HOMING_CYCLE_0
+  #error "Required HOMING_CYCLE_0 not defined."
+#endif
+
+#if defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && !defined(VARIABLE_SPINDLE)
+  #error "USE_SPINDLE_DIR_AS_ENABLE_PIN may only be used with VARIABLE_SPINDLE enabled"
+#endif
+
+#if defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && !defined(CPU_MAP_ATMEGA328P)
+  #error "USE_SPINDLE_DIR_AS_ENABLE_PIN may only be used with a 328p processor"
+#endif
+
+#if !defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && defined(SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED)
+  #error "SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED may only be used with USE_SPINDLE_DIR_AS_ENABLE_PIN enabled"
+#endif
+
+#if defined(PARKING_ENABLE)
+  #if defined(HOMING_FORCE_SET_ORIGIN)
+    #error "HOMING_FORCE_SET_ORIGIN is not supported with PARKING_ENABLE at this time."
+  #endif
+#endif
+
+#if defined(ENABLE_PARKING_OVERRIDE_CONTROL)
+  #if !defined(PARKING_ENABLE)
+    #error "ENABLE_PARKING_OVERRIDE_CONTROL must be enabled with PARKING_ENABLE."
+  #endif
+#endif
+
+#if defined(SPINDLE_PWM_MIN_VALUE)
+  #if !(SPINDLE_PWM_MIN_VALUE > 0)
+    #error "SPINDLE_PWM_MIN_VALUE must be greater than zero."
+  #endif
+#endif
+
+#if (REPORT_WCO_REFRESH_BUSY_COUNT < REPORT_WCO_REFRESH_IDLE_COUNT)
+  #error "WCO busy refresh is less than idle refresh."
+#endif
+#if (REPORT_OVR_REFRESH_BUSY_COUNT < REPORT_OVR_REFRESH_IDLE_COUNT)
+  #error "Override busy refresh is less than idle refresh."
+#endif
+#if (REPORT_WCO_REFRESH_IDLE_COUNT < 2)
+  #error "WCO refresh must be greater than one."
+#endif
+#if (REPORT_OVR_REFRESH_IDLE_COUNT < 1)
+  #error "Override refresh must be greater than zero."
+#endif
 
 #endif

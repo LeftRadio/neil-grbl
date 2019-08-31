@@ -15,7 +15,7 @@ OS = Linux
 ######################################
 # target
 ######################################
-TARGET = grbl-core
+TARGET = libngrbl
 
 ######################################
 # building variables
@@ -24,7 +24,7 @@ TARGET = grbl-core
 DEBUG = 0
 
 # optimization
-OPT = -O1
+OPT = -O2
 
 #######################################
 # paths
@@ -37,25 +37,26 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
-grbl.c \
-config/settings.c \
-hal_abstract/hal_abstract.c \
-system/gcode.c \
-system/jog.c \
-system/planner.c \
-system/protocol.c \
-system/system.c \
-serial/print.c \
-serial/report.c \
-serial/serial.c \
-controls/coolant_control.c \
-controls/motion_control.c \
-controls/spindle_control.c \
-controls/stepper.c \
-eeprom/eeprom.c \
-inputs/limits.c \
-inputs/probe.c \
-misc/nuts_bolts.c \
+core/grbl.c \
+core/serial/print.c \
+core/serial/report.c \
+core/serial/serial.c \
+core/controls/coolant_control.c \
+core/controls/motion_control.c \
+core/controls/spindle_control.c \
+core/controls/stepper.c \
+core/eeprom/eeprom.c \
+core/hal_abstract/hal_abstract.c \
+core/inputs/limits.c \
+core/inputs/probe.c \
+core/misc/nuts_bolts.c \
+core/system/gcode.c \
+core/system/jog.c \
+core/system/planner.c \
+core/system/protocol.c \
+core/system/settings.c \
+core/system/system.c \
+
 
 # ASM sources
 ASM_SOURCES =  \
@@ -102,20 +103,23 @@ C_DEFS =  \
 -DARM_MATH_CM4 \
 -D__FPU_PRESENT \
 
+# -DDEFAULTS_GENERIC \
+
 # AS includes
 AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
 -I. \
--Iserial \
--Iconfig \
--Icontrols \
--Ieeprom \
--Ihal_abstract \
--Iinputs \
--Imisc \
--Isystem \
+-Icore \
+-Icore/serial \
+-Icore/config_user \
+-Icore/controls \
+-Icore/eeprom \
+-Icore/hal_abstract \
+-Icore/inputs \
+-Icore/misc \
+-Icore/system \
 
 # compile gcc flags
 PEDANTIC = -pedantic

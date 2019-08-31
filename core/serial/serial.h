@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    serial.h
-  * @author  leftradio
+  * @author
   * @version 1.0.0
   * @date
   * @brief
@@ -41,8 +41,8 @@ extern uint8_t serial_get_rx_buffer_available(void);
 extern uint8_t serial_get_rx_buffer_count(void);
 extern uint8_t serial_get_tx_buffer_count(void);
 
-#endif /* __GRBL_SERIAL__H */
 
+#endif /* __GRBL_SERIAL__H */
 /*********************************************************************************************************
       END FILE
 *********************************************************************************************************/

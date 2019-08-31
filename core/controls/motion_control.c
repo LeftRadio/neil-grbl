@@ -1,92 +1,111 @@
 /*
-  motion_control.c - high level interface for issuing motion commands
-  Part of Grbl
+  ******************************************************************************
+  * @file     motion_control.c
+  * @author
+  * @version  1.0.0
+  * @date
+  * @brief
+  ******************************************************************************
+**/
 
-  Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
-  Copyright (c) 2009-2011 Simen Svale Skogsrud
+/* Includes ------------------------------------------------------------------*/
+#include <math.h>
+#include <string.h>
+#include "motion_control.h"
+#include "settings.h"
+#include "planner.h"
+#include "system.h"
+#include "limits.h"
+#include "protocol.h"
+#include "spindle_control.h"
+#include "coolant_control.h"
+#include "gcode.h"
+#include "probe.h"
+#include "stepper.h"
+#include "config.h"
+#include "report.h"
+#include "nuts_bolts.h"
 
-  Grbl is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+/* Private typedef -----------------------------------------------------------*/
+/* Private define ------------------------------------------------------------*/
+/* Private macro -------------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/
+/* Private function prototypes -----------------------------------------------*/
+/* Extern function -----------------------------------------------------------*/
+/* Private Functions ---------------------------------------------------------*/
+/* Exported Functions --------------------------------------------------------*/
 
-  Grbl is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-#include "grbl.h"
-
-
-// Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
-// unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
-// (1 minute)/feed_rate time.
-// NOTE: This is the primary gateway to the grbl planner. All line motions, including arc line
-// segments, must pass through this routine before being passed to the planner. The seperation of
-// mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
-// in the planner and to let backlash compensation or canned cycle integration simple and direct.
-void mc_line(float *target, plan_line_data_t *pl_data)
-{
-  // If enabled, check for soft limit violations. Placed here all line motions are picked up
-  // from everywhere in Grbl.
-  if (bit_istrue(settings.flags,BITFLAG_SOFT_LIMIT_ENABLE)) {
-    // NOTE: Block jog state. Jogging is a special case and soft limits are handled independently.
-    if (sys.state != STATE_JOG) { limits_soft_check(target); }
-  }
-
-  // If in check gcode mode, prevent motion by blocking planner. Soft limits still work.
-  if (sys.state == STATE_CHECK_MODE) { return; }
-
-  // NOTE: Backlash compensation may be installed here. It will need direction info to track when
-  // to insert a backlash line motion(s) before the intended line motion and will require its own
-  // plan_check_full_buffer() and check for system abort loop. Also for position reporting
-  // backlash steps will need to be also tracked, which will need to be kept at a system level.
-  // There are likely some other things that will need to be tracked as well. However, we feel
-  // that backlash compensation should NOT be handled by Grbl itself, because there are a myriad
-  // of ways to implement it and can be effective or ineffective for different CNC machines. This
-  // would be better handled by the interface as a post-processor task, where the original g-code
-  // is translated and inserts backlash motions that best suits the machine.
-  // NOTE: Perhaps as a middle-ground, all that needs to be sent is a flag or special command that
-  // indicates to Grbl what is a backlash compensation motion, so that Grbl executes the move but
-  // doesn't update the machine position values. Since the position values used by the g-code
-  // parser and planner are separate from the system machine positions, this is doable.
-
-  // If the buffer is full: good! That means we are well ahead of the robot.
-  // Remain in this loop until there is room in the buffer.
-  do {
-    protocol_execute_realtime(); // Check for any run-time commands
-    if (sys.abort) { return; } // Bail, if system abort.
-    if ( plan_check_full_buffer() ) { protocol_auto_cycle_start(); } // Auto-cycle start when buffer is full.
-    else { break; }
-  } while (1);
-
-  // Plan and queue motion into planner buffer
-  if (plan_buffer_line(target, pl_data) == PLAN_EMPTY_BLOCK) {
-    if (bit_istrue(settings.flags,BITFLAG_LASER_MODE)) {
-      // Correctly set spindle state, if there is a coincident position passed. Forces a buffer
-      // sync while in M3 laser mode only.
-      if (pl_data->condition & PL_COND_FLAG_SPINDLE_CW) {
-        spindle_sync(PL_COND_FLAG_SPINDLE_CW, pl_data->spindle_speed);
-      }
+/**
+  * @brief  Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
+            unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
+            (1 minute)/feed_rate time.
+            NOTE: This is the primary gateway to the grbl planner. All line motions, including arc line
+            segments, must pass through this routine before being passed to the planner. The seperation of
+            mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
+            in the planner and to let backlash compensation or canned cycle integration simple and direct.
+  * @param  float *target, plan_line_data_t *pl_data
+  * @retval None
+  */
+void mc_line(float *target, plan_line_data_t *pl_data) {
+    /* if enabled, check for soft limit violations, placed here all line motions
+       are picked up from everywhere in grbl */
+    if (bit_istrue(settings.flags,BITFLAG_SOFT_LIMIT_ENABLE)) {
+        // NOTE: Block jog state. Jogging is a special case and soft limits are handled independently.
+        if (sys.state != STATE_JOG) { limits_soft_check(target); }
     }
-  }
+
+    // If in check gcode mode, prevent motion by blocking planner. Soft limits still work.
+    if (sys.state == STATE_CHECK_MODE) { return; }
+
+    // NOTE: Backlash compensation may be installed here. It will need direction info to track when
+    // to insert a backlash line motion(s) before the intended line motion and will require its own
+    // plan_check_full_buffer() and check for system abort loop. Also for position reporting
+    // backlash steps will need to be also tracked, which will need to be kept at a system level.
+    // There are likely some other things that will need to be tracked as well. However, we feel
+    // that backlash compensation should NOT be handled by Grbl itself, because there are a myriad
+    // of ways to implement it and can be effective or ineffective for different CNC machines. This
+    // would be better handled by the interface as a post-processor task, where the original g-code
+    // is translated and inserts backlash motions that best suits the machine.
+    // NOTE: Perhaps as a middle-ground, all that needs to be sent is a flag or special command that
+    // indicates to Grbl what is a backlash compensation motion, so that Grbl executes the move but
+    // doesn't update the machine position values. Since the position values used by the g-code
+    // parser and planner are separate from the system machine positions, this is doable.
+
+    // If the buffer is full: good! That means we are well ahead of the robot.
+    // Remain in this loop until there is room in the buffer.
+    do {
+        protocol_execute_realtime(); // Check for any run-time commands
+        if (sys.abort) { return; } // Bail, if system abort.
+        if ( plan_check_full_buffer() ) { protocol_auto_cycle_start(); } // Auto-cycle start when buffer is full.
+        else { break; }
+    } while (1);
+
+    /* plan and queue motion into planner buffer */
+    if (plan_buffer_line(target, pl_data) == PLAN_EMPTY_BLOCK) {
+        if (bit_istrue(settings.flags,BITFLAG_LASER_MODE)) {
+            /* correctly set spindle state, if there is a coincident position passed
+               forces a buffer sync while in M3 laser mode only */
+            if (pl_data->condition & PL_COND_FLAG_SPINDLE_CW) {
+                spindle_sync(PL_COND_FLAG_SPINDLE_CW, pl_data->spindle_speed);
+            }
+        }
+    }
 }
 
-
-// Execute an arc in offset mode format. position == current xyz, target == target xyz,
-// offset == offset from current xyz, axis_X defines circle plane in tool space, axis_linear is
-// the direction of helical travel, radius == circle radius, isclockwise boolean. Used
-// for vector transformation direction.
-// The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
-// of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
-// distance from segment to the circle when the end points both lie on the circle.
+/**
+  * @brief  Execute an arc in offset mode format. position == current xyz, target == target xyz,
+            offset == offset from current xyz, axis_X defines circle plane in tool space, axis_linear is
+            the direction of helical travel, radius == circle radius, isclockwise boolean. Used
+            for vector transformation direction.
+            The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
+            of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
+            distance from segment to the circle when the end points both lie on the circle.
+  * @param  float *target, plan_line_data_t *pl_data
+  * @retval None
+  */
 void mc_arc(float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius,
-  uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear, uint8_t is_clockwise_arc)
-{
+  uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear, uint8_t is_clockwise_arc) {
+  /* */
   float center_axis0 = position[axis_0] + offset[axis_0];
   float center_axis1 = position[axis_1] + offset[axis_1];
   float r_axis0 = -offset[axis_0];  // Radius vector from center to current location
@@ -190,21 +209,27 @@ void mc_arc(float *target, plan_line_data_t *pl_data, float *position, float *of
   mc_line(target, pl_data);
 }
 
-
-// Execute dwell in seconds.
-void mc_dwell(float seconds)
-{
-  if (sys.state == STATE_CHECK_MODE) { return; }
-  protocol_buffer_synchronize();
-  delay_sec(seconds, DELAY_MODE_DWELL);
+/**
+  * @brief  Execute dwell in seconds.
+  * @param  float *target, plan_line_data_t *pl_data
+  * @retval None
+  */
+void mc_dwell(float seconds) {
+    if (sys.state == STATE_CHECK_MODE) {
+        return;
+    }
+    protocol_buffer_synchronize();
+    delay_sec_nonblock(seconds, DELAY_MODE_DWELL);
 }
 
-
-// Perform homing cycle to locate and set machine zero. Only '$H' executes this command.
-// NOTE: There should be no motions in the buffer and Grbl must be in an idle state before
-// executing the homing cycle. This prevents incorrect buffered plans after homing.
-void mc_homing_cycle(uint8_t cycle_mask)
-{
+/**
+  * @brief  Perform homing cycle to locate and set machine zero. Only '$H' executes this command.
+            NOTE: There should be no motions in the buffer and Grbl must be in an idle state before
+            executing the homing cycle. This prevents incorrect buffered plans after homing.
+  * @param  float *target, plan_line_data_t *pl_data
+  * @retval None
+  */
+void mc_homing_cycle(uint8_t cycle_mask) {
   // Check and abort homing cycle, if hard limits are already enabled. Helps prevent problems
   // with machines with limits wired on both ends of travel to one limit pin.
   // TODO: Move the pin-specific LIMIT_PIN call to limits.c as a function.
@@ -250,11 +275,13 @@ void mc_homing_cycle(uint8_t cycle_mask)
   limits_init();
 }
 
-
-// Perform tool length probe cycle. Requires probe switch.
-// NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
-uint8_t mc_probe_cycle(float *target, plan_line_data_t *pl_data, uint8_t parser_flags)
-{
+/**
+  * @brief  Perform tool length probe cycle. Requires probe switch.
+            NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
+  * @param  float *target, plan_line_data_t *pl_data
+  * @retval None
+  */
+uint8_t mc_probe_cycle(float *target, plan_line_data_t *pl_data, uint8_t parser_flags) {
   // TODO: Need to update this cycle so it obeys a non-auto cycle start.
   if (sys.state == STATE_CHECK_MODE) { return(GC_PROBE_CHECK_MODE); }
 
@@ -263,17 +290,17 @@ uint8_t mc_probe_cycle(float *target, plan_line_data_t *pl_data, uint8_t parser_
   if (sys.abort) { return(GC_PROBE_ABORT); } // Return if system reset has been issued.
 
   // Initialize probing control variables
-  uint8_t is_probe_away = bit_istrue(parser_flags,GC_PARSER_PROBE_IS_AWAY);
+  // uint8_t is_probe_away = bit_istrue(parser_flags,GC_PARSER_PROBE_IS_AWAY);
   uint8_t is_no_error = bit_istrue(parser_flags,GC_PARSER_PROBE_IS_NO_ERROR);
   sys.probe_succeeded = false; // Re-initialize probe history before beginning cycle.
-  probe_configure_invert_mask(is_probe_away);
+  // probe_configure_invert_mask(is_probe_away);
 
   // After syncing, check if probe is already triggered. If so, halt and issue alarm.
   // NOTE: This probe initialization error applies to all probing cycles.
   if ( probe_get_state() ) { // Check probe pin state.
     system_set_exec_alarm(EXEC_ALARM_PROBE_FAIL_INITIAL);
     protocol_execute_realtime();
-    probe_configure_invert_mask(false); // Re-initialize invert mask before returning.
+    // probe_configure_invert_mask(false); // Re-initialize invert mask before returning.
     return(GC_PROBE_FAIL_INIT); // Nothing else to do but bail.
   }
 
@@ -300,7 +327,7 @@ uint8_t mc_probe_cycle(float *target, plan_line_data_t *pl_data, uint8_t parser_
     sys.probe_succeeded = true; // Indicate to system the probing cycle completed successfully.
   }
   sys_probe_state = PROBE_OFF; // Ensure probe state monitor is disabled.
-  probe_configure_invert_mask(false); // Re-initialize invert mask.
+  // probe_configure_invert_mask(false); // Re-initialize invert mask.
   protocol_execute_realtime();   // Check and execute run-time commands
 
   // Reset the stepper and planner buffers to remove the remainder of the probe motion.
@@ -317,9 +344,12 @@ uint8_t mc_probe_cycle(float *target, plan_line_data_t *pl_data, uint8_t parser_
   else { return(GC_PROBE_FAIL_END); } // Failed to trigger probe within travel. With or without error.
 }
 
-
-// Plans and executes the single special motion case for parking. Independent of main planner buffer.
-// NOTE: Uses the always free planner ring buffer head to store motion parameters for execution.
+/**
+  * @brief  Plans and executes the single special motion case for parking. Independent of main planner buffer.
+            NOTE: Uses the always free planner ring buffer head to store motion parameters for execution.
+  * @param  float *target, plan_line_data_t *pl_data
+  * @retval None
+  */
 #ifdef PARKING_ENABLE
   void mc_parking_motion(float *parking_target, plan_line_data_t *pl_data)
   {
@@ -357,14 +387,16 @@ uint8_t mc_probe_cycle(float *target, plan_line_data_t *pl_data, uint8_t parser_
   }
 #endif
 
-
-// Method to ready the system to reset by setting the realtime reset command and killing any
-// active processes in the system. This also checks if a system reset is issued while Grbl
-// is in a motion state. If so, kills the steppers and sets the system alarm to flag position
-// lost, since there was an abrupt uncontrolled deceleration. Called at an interrupt level by
-// realtime abort command and hard limits. So, keep to a minimum.
-void mc_reset()
-{
+/**
+  * @brief  Method to ready the system to reset by setting the realtime reset command and killing any
+            active processes in the system. This also checks if a system reset is issued while Grbl
+            is in a motion state. If so, kills the steppers and sets the system alarm to flag position
+            lost, since there was an abrupt uncontrolled deceleration. Called at an interrupt level by
+            realtime abort command and hard limits. So, keep to a minimum.
+  * @param  float *target, plan_line_data_t *pl_data
+  * @retval None
+  */
+void mc_reset(void) {
   // Only this function can set the system reset. Helps prevent multiple kill calls.
   if (bit_isfalse(sys_rt_exec_state, EXEC_RESET)) {
     system_set_exec_state_flag(EXEC_RESET);
@@ -386,3 +418,8 @@ void mc_reset()
     }
   }
 }
+
+
+/******************************************************************************
+      END FILE
+******************************************************************************/

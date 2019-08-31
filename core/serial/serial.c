@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    serial.c
-  * @author  leftradio
+  * @author
   * @version 1.0.0
   * @date
   * @brief
@@ -9,9 +9,11 @@
 **/
 
 /* Includes ------------------------------------------------------------------*/
-#include "grbl.h"
-#include "hal_abstract.h"
+#include "system.h"
+#include "config.h"
 #include "serial.h"
+#include "motion_control.h"
+#include "hal_abstract.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -82,7 +84,7 @@ uint8_t serial_get_tx_buffer_count(void) {
   * @retval None
   */
 void serial_init(void) {
-    grbl_hal_serail_init(BAUD_RATE);
+    ngrbl_hal_serail_init(BAUD_RATE);
 }
 
 /**
@@ -90,7 +92,7 @@ void serial_init(void) {
   * @param  data byte
   * @retval None
   */
-void serial_write(uint8_t data) {
+void grbl_serial_write(uint8_t data) {
     // Calculate next head
     uint8_t next_head = serial_tx_buffer_head + 1;
     if (next_head == TX_RING_BUFFER) { next_head = 0; }
@@ -105,7 +107,7 @@ void serial_write(uint8_t data) {
     serial_tx_buffer[serial_tx_buffer_head] = data;
     serial_tx_buffer_head = next_head;
 
-    grbl_hal_serial_write_byte(serial_tx_buffer[serial_tx_buffer_tail]);
+    ngrbl_hal_serial_write_byte(serial_tx_buffer[serial_tx_buffer_tail]);
 }
 
 /**
@@ -133,7 +135,7 @@ uint8_t serial_read(void) {
 }
 
 /**
-  * @brief  grbl_hal_serial_rx_callback
+  * @brief  ngrbl_hal_serial_rx_callback
   * @param  rx byte data
   * @retval None
   */
@@ -145,11 +147,11 @@ void serial_reset_read_buffer(void) {
 /* RX/TX callback function ---------------------------------------------------*/
 
 /**
-  * @brief  grbl_hal_serial_tx_callback
+  * @brief  ngrbl_hal_serial_tx_callback
   * @param  None
   * @retval None
   */
-void grbl_hal_serial_tx_callback(void) {
+void ngrbl_hal_serial_tx_callback(void) {
     /* Temporary serial_tx_buffer_tail (to optimize for volatile) */
     uint8_t tail = serial_tx_buffer_tail;
     /* Update tail position */
@@ -159,7 +161,7 @@ void grbl_hal_serial_tx_callback(void) {
     serial_tx_buffer_tail = tail;
     /* Stop tx-streaming if this concludes the transfer */
     if (tail == serial_tx_buffer_head) {
-        grbl_hal_serail_stop_tx();
+        ngrbl_hal_serail_stop_tx();
     }
 
 }
@@ -249,11 +251,11 @@ static void _store_handle_data_in(uint8_t data) {
 }
 
 /**
-  * @brief  grbl_hal_serial_rx_callback
+  * @brief  ngrbl_hal_serial_rx_callback
   * @param  rx byte data
   * @retval None
   */
-void grbl_hal_serial_rx_callback(uint8_t* data, uint8_t length) {
+void ngrbl_hal_serial_rx_callback(uint8_t* data, uint8_t length) {
     uint8_t i = 0;
     while (i != length) {
         _store_handle_data_in(data[i]);

@@ -1,47 +1,37 @@
-/*
-  coolant_control.h - spindle control methods
-  Part of Grbl
+/**
+  ******************************************************************************
+  * @file    coolant_control.h
+  * @author
+  * @version 1.0.0
+  * @date
+  * @brief
+  ******************************************************************************
+**/
 
-  Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __GRBL_COOLANT_CONTROL_H
+#define __GRBL_COOLANT_CONTROL_H
 
-  Grbl is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+/* Includes ------------------------------------------------------------------*/
+#include <stdint.h>
 
-  Grbl is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+/* Exported define -----------------------------------------------------------*/
+#define COOLANT_STATE_DISABLE       0  // Must be zero
+#define COOLANT_STATE_FLOOD         PL_COND_FLAG_COOLANT_FLOOD
+#define COOLANT_STATE_MIST          PL_COND_FLAG_COOLANT_MIST
 
-  You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-#ifndef coolant_control_h
-#define coolant_control_h
-
-#define COOLANT_NO_SYNC     false
-#define COOLANT_FORCE_SYNC  true
-
-#define COOLANT_STATE_DISABLE   0  // Must be zero
-#define COOLANT_STATE_FLOOD     PL_COND_FLAG_COOLANT_FLOOD
-#define COOLANT_STATE_MIST      PL_COND_FLAG_COOLANT_MIST
+/* Exported macro ------------------------------------------------------------*/
+/* Exported typedef ----------------------------------------------------------*/
+/* Exported variables --------------------------------------------------------*/
+/* Exported function ---------------------------------------------------------*/
+extern void coolant_init(void);
+extern uint8_t coolant_get_state(void);
+extern void coolant_stop(void);
+extern void coolant_set_state(uint8_t mode);
+extern void coolant_sync(uint8_t mode);
 
 
-// Initializes coolant control pins.
-void coolant_init();
-
-// Returns current coolant output state. Overrides may alter it from programmed state.
-uint8_t coolant_get_state();
-
-// Immediately disables coolant pins.
-void coolant_stop();
-
-// Sets the coolant pins according to state specified.
-void coolant_set_state(uint8_t mode);
-
-// G-code parser entry-point for setting coolant states. Checks for and executes additional conditions.
-void coolant_sync(uint8_t mode);
-
-#endif
+#endif /* __GRBL_COOLANT_CONTROL_H */
+/*******************************************************************************
+      END FILE
+*******************************************************************************/

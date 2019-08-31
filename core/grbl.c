@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    grbl.c
-  * @author  leftradio
+  * @author
   * @version 1.0.0
   * @date
   * @brief
@@ -9,7 +9,20 @@
 **/
 
 /* Includes ------------------------------------------------------------------*/
-#include "grbl.h"
+#include <string.h>
+#include "system.h"
+#include "serial.h"
+#include "stepper.h"
+#include "settings.h"
+#include "config.h"
+#include "gcode.h"
+#include "coolant_control.h"
+#include "spindle_control.h"
+#include "motion_control.h"
+#include "limits.h"
+#include "probe.h"
+#include "report.h"
+#include "protocol.h"
 #include "hal_abstract.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,16 +49,16 @@ volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bit
 /* CRITICAL SECTION callbacks ------------------------------------------------*/
 
 /**
-  * @brief  grbl_init
+  * @brief  ngrbl_init
   * @param  None
   * @retval None
   */
-void grbl_init(void) {
+void ngrbl_init(void) {
     /*
       Initialize system upon power-up.
     */
 
-    grbl_hal_disable_interrupts();
+    ngrbl_hal_disable_interrupts();
 
     /* Setup serial baud rate and interrupts */
     serial_init();
@@ -58,7 +71,7 @@ void grbl_init(void) {
     /* Clear machine position. */
     memset(sys_position,0,sizeof(sys_position));
 
-    grbl_hal_enable_interrupts();
+    ngrbl_hal_enable_interrupts();
 
     /* Initialize system state. */
     #ifdef FORCE_INITIALIZATION_ALARM
@@ -86,11 +99,11 @@ void grbl_init(void) {
 
 
 /**
-  * @brief  grbl_init
+  * @brief  ngrbl_init
   * @param  None
   * @retval None
   */
-void grbl_main_loop(void) {
+void ngrbl_main_loop(void) {
     /* Grbl initialization loop upon power-up or a system abort. For the latter, all processes
        will return to this loop to be cleanly re-initialized. */
 

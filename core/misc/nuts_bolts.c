@@ -1,7 +1,7 @@
 /*
   ******************************************************************************
   * @file     nuts_bolts.c
-  * @author   leftradio
+  * @author
   * @version  1.0.0
   * @date
   * @brief
@@ -9,8 +9,11 @@
 **/
 
 /* Includes ------------------------------------------------------------------*/
-#include "grbl.h"
+#include <math.h>
 #include "nuts_bolts.h"
+#include "system.h"
+#include "config.h"
+#include "protocol.h"
 #include "hal_abstract.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +45,7 @@ uint8_t read_float(char *line, uint8_t *char_counter, float *float_ptr) {
     /* grab first character and increment pointer, no spaces assumed in line */
     c = *ptr++;
     /* capture initial positive/minus character */
-    bool isnegative = false;
+    bool_g isnegative = false;
     if (c == '-') {
       isnegative = true;
       c = *ptr++;
@@ -53,7 +56,7 @@ uint8_t read_float(char *line, uint8_t *char_counter, float *float_ptr) {
     uint32_t intval = 0;
     int8_t exp = 0;
     uint8_t ndigit = 0;
-    bool isdecimal = false;
+    bool_g isdecimal = false;
     while(1) {
         c -= '0';
         if (c <= 9) {
@@ -152,6 +155,37 @@ float limit_value_by_axis_maximum(float *max_value, float *unit_vec) {
         }
     }
     return limit_value;
+}
+
+
+/**
+  * @brief  Non-blocking delay function used for general operation and suspend features.
+  * @param  float seconds, uint8_t mode
+  * @retval None
+  */
+void delay_sec_nonblock(float seconds, uint8_t mode) {
+  /* */
+  uint16_t i = (uint16_t)ceilf((1000 / DWELL_TIME_STEP) * seconds);
+  /* */
+  while (i-- > 0) {
+      if (sys.abort) { return; }
+
+      /* DELAY_MODE_DWELL */
+      if (mode == DELAY_MODE_DWELL) {
+          protocol_execute_realtime();
+      }
+      /* DELAY_MODE_SYS_SUSPEND */
+      else {
+          /* execute rt_system() only to avoid nesting suspend loops */
+          protocol_exec_rt_system();
+          /* bail, if safety door reopens */
+          if (sys.suspend & SUSPEND_RESTART_RETRACT) {
+              return;
+          }
+      }
+      /* delay DWELL_TIME_STEP increment in ms */
+      ngrbl_hal_delay_ms(DWELL_TIME_STEP);
+  }
 }
 
 
