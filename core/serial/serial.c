@@ -152,18 +152,17 @@ void serial_reset_read_buffer(void) {
   * @retval None
   */
 void ngrbl_hal_serial_tx_callback(void) {
-    /* Temporary serial_tx_buffer_tail (to optimize for volatile) */
-    uint8_t tail = serial_tx_buffer_tail;
     /* Update tail position */
-    tail++;
-    if (tail == TX_RING_BUFFER) tail = 0;
-    /* */
-    serial_tx_buffer_tail = tail;
+    if (++serial_tx_buffer_tail == TX_RING_BUFFER) {
+        serial_tx_buffer_tail = 0;
+    }
     /* Stop tx-streaming if this concludes the transfer */
-    if (tail == serial_tx_buffer_head) {
+    if (serial_tx_buffer_tail == serial_tx_buffer_head) {
         ngrbl_hal_serail_stop_tx();
     }
-
+    else {
+        ngrbl_hal_serial_write_byte(serial_tx_buffer[serial_tx_buffer_tail]);
+    }
 }
 
 /**
