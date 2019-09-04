@@ -150,23 +150,29 @@ uint8_t system_execute_line(char *line) {
         case 'H' : // Perform homing cycle [IDLE/ALARM]
           if (bit_isfalse(settings.flags,BITFLAG_HOMING_ENABLE)) {return(STATUS_SETTING_DISABLED); }
           if (system_check_safety_door_ajar()) { return(STATUS_CHECK_DOOR); } // Block if safety door is ajar.
-          sys.state = STATE_HOMING; // Set system state variable
+          /* */
+          sys.state = STATE_HOMING;
           if (line[2] == 0) {
-            mc_homing_cycle(HOMING_CYCLE_ALL);
-          #ifdef HOMING_SINGLE_AXIS_COMMANDS
-            } else if (line[3] == 0) {
-              switch (line[2]) {
-                case 'X': mc_homing_cycle(HOMING_CYCLE_X); break;
-                case 'Y': mc_homing_cycle(HOMING_CYCLE_Y); break;
-                case 'Z': mc_homing_cycle(HOMING_CYCLE_Z); break;
-                default: return(STATUS_INVALID_STATEMENT);
-              }
-          #endif
-          } else { return(STATUS_INVALID_STATEMENT); }
-          if (!sys.abort) {  // Execute startup scripts after successful homing.
-            sys.state = STATE_IDLE; // Set to IDLE when complete.
-            stepper_go_idle(); // Set steppers to the settings idle state before returning.
-            if (line[2] == 0) { system_execute_startup(line); }
+              mc_homing_cycle(HOMING_CYCLE_ALL);
+              #ifdef HOMING_SINGLE_AXIS_COMMANDS
+                } else if (line[3] == 0) {
+                  switch (line[2]) {
+                    case 'X': mc_homing_cycle(HOMING_CYCLE_X); break;
+                    case 'Y': mc_homing_cycle(HOMING_CYCLE_Y); break;
+                    case 'Z': mc_homing_cycle(HOMING_CYCLE_Z); break;
+                    default: return(STATUS_INVALID_STATEMENT);
+                  }
+              #endif
+          }
+          else {
+              return STATUS_INVALID_STATEMENT;
+          }
+          /* execute startup scripts after successful homing. */
+          if (!sys.abort) {
+              /* set steppers to the settings idle state before returning */
+              sys.state = STATE_IDLE;
+              stepper_go_idle();
+              system_execute_startup(line);
           }
           break;
         case 'S' : // Puts Grbl to sleep [IDLE/ALARM]

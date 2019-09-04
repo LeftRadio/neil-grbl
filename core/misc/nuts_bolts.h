@@ -23,10 +23,10 @@
 #define SOME_LARGE_VALUE 1.0E+38
 
 // Axis array index values. Must start with 0 and be continuous.
-#define N_AXIS 				((uint8_t)3) // Number of axes
-#define X_AXIS 				((uint8_t)0) // Axis indexing value.
-#define Y_AXIS 				((uint8_t)1)
-#define Z_AXIS 				((uint8_t)2)
+#define N_AXIS                 ((uint8_t)3) // Number of axes
+#define X_AXIS                 ((uint8_t)0) // Axis indexing value.
+#define Y_AXIS                 ((uint8_t)1)
+#define Z_AXIS                 ((uint8_t)2)
 // #define A_AXIS 3
 
 // CoreXY motor assignments. DO NOT ALTER.
@@ -44,20 +44,20 @@
 #define DELAY_MODE_DWELL       0
 #define DELAY_MODE_SYS_SUSPEND 1
 
-// Useful macros
-#define clear_vector(a) memset(a, 0, sizeof(a))
-#define clear_vector_float(a) memset(a, 0.0, sizeof(float)*N_AXIS)
+//
+#define clear_axis_vector_float(a)       { for(size_t i = 0; i != N_AXIS; i++) { (a)[i] = 0; } }
+
 // #define clear_vector_long(a) memset(a, 0.0, sizeof(long)*N_AXIS)
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #define isequal_position_vector(a,b) !(memcmp(a, b, sizeof(float)*N_AXIS))
 
 // Bit field and masking macros
-#define bit(n) 						(1 << (n))
-#define bit_true(x,mask) 			((x) |= (mask))
-#define bit_false(x,mask) 			((x) &= ~(mask))
-#define bit_istrue(x,mask) 			(((x) & mask) != 0)
-#define bit_isfalse(x,mask) 		(((x) & mask) == 0)
+#define bit(n)                       (1 << (n))
+#define bit_true(x,mask)             ((x) |= (mask))
+#define bit_false(x,mask)            ((x) &= ~(mask))
+#define bit_istrue(x,mask)           (((x) & mask) != 0)
+#define bit_isfalse(x,mask)          (((x) & mask) == 0)
 
 /* Exported macro ------------------------------------------------------------*/
 /* Exported typedef ----------------------------------------------------------*/

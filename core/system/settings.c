@@ -235,7 +235,7 @@ uint8_t settings_read_coord_data(uint8_t coord_select, float *coord_data) {
     uint32_t addr = coord_select * (sizeof(float) * N_AXIS + 1) + EEPROM_ADDR_PARAMETERS;
     /* reset with default zero vector */
     if (!(memcpy_from_eeprom_with_checksum((char*)coord_data, addr, sizeof(float)*N_AXIS))) {
-        clear_vector_float(coord_data);
+        clear_axis_vector_float(coord_data);
         settings_write_coord_data(coord_select,coord_data);
         return false;
     }

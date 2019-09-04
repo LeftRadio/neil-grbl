@@ -1045,7 +1045,7 @@ uint8_t gc_execute_line(char *line) {
       system_flag_wco_change();
       break;
     case NON_MODAL_RESET_COORDINATE_OFFSET:
-      clear_vector(gc_state.coord_offset); // Disable G92 offsets by zeroing offset vector.
+      clear_axis_vector_float(gc_state.coord_offset); // Disable G92 offsets by zeroing offset vector.
       system_flag_wco_change();
       break;
   }
