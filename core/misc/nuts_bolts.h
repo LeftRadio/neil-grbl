@@ -53,15 +53,16 @@
 #define isequal_position_vector(a,b) !(memcmp(a, b, sizeof(float)*N_AXIS))
 
 // Bit field and masking macros
-#define bit(n) (1 << n)
-#define bit_true(x,mask) (x) |= (mask)
-#define bit_false(x,mask) (x) &= ~(mask)
-#define bit_istrue(x,mask) ((x & mask) != 0)
-#define bit_isfalse(x,mask) ((x & mask) == 0)
+#define bit(n) 						(1 << (n))
+#define bit_true(x,mask) 			((x) |= (mask))
+#define bit_false(x,mask) 			((x) &= ~(mask))
+#define bit_istrue(x,mask) 			(((x) & mask) != 0)
+#define bit_isfalse(x,mask) 		(((x) & mask) == 0)
 
 /* Exported macro ------------------------------------------------------------*/
 /* Exported typedef ----------------------------------------------------------*/
-typedef enum {true_g, false_g} bool_g;
+typedef enum { true_g, false_g } bool_g;
+
 /* Exported variables --------------------------------------------------------*/
 /* Exported function ---------------------------------------------------------*/
 extern uint8_t read_float(char *line, uint8_t *char_counter, float *float_ptr);
