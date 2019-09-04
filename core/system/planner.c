@@ -155,7 +155,7 @@ static void planner_recalculate(void) {
         if (block_index == block_buffer_tail) { stepper_update_plan_block_parameters(); }
 
         // Compute maximum entry speed decelerating over the current block from its exit speed.
-        if (current->entry_speed_sqr != current->max_entry_speed_sqr) {
+        if ( (int32_t)current->entry_speed_sqr != (int32_t)current->max_entry_speed_sqr ) {
           entry_speed_sqr = next->entry_speed_sqr + 2*current->acceleration*current->millimeters;
           if (entry_speed_sqr < current->max_entry_speed_sqr) {
             current->entry_speed_sqr = entry_speed_sqr;
@@ -177,7 +177,7 @@ static void planner_recalculate(void) {
       // Any acceleration detected in the forward pass automatically moves the optimal planned
       // pointer forward, since everything before this is all optimal. In other words, nothing
       // can improve the plan from the buffer tail to the planned pointer by logic.
-      if (current->entry_speed_sqr < next->entry_speed_sqr) {
+      if ( next->entry_speed_sqr - current->entry_speed_sqr > 0.0 ) {
         entry_speed_sqr = current->entry_speed_sqr + 2*current->acceleration*current->millimeters;
         // If true, current block is full-acceleration and we can move the planned pointer forward.
         if (entry_speed_sqr < next->entry_speed_sqr) {
@@ -190,7 +190,7 @@ static void planner_recalculate(void) {
       // point in the buffer. When the plan is bracketed by either the beginning of the
       // buffer and a maximum entry speed or two maximum entry speeds, every block in between
       // cannot logically be further improved. Hence, we don't have to recompute them anymore.
-      if (next->entry_speed_sqr == next->max_entry_speed_sqr) { block_buffer_planned = block_index; }
+      if ((int32_t)next->entry_speed_sqr == (int32_t)next->max_entry_speed_sqr) { block_buffer_planned = block_index; }
       block_index = plan_next_block_index( block_index );
     }
 }

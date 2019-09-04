@@ -670,7 +670,7 @@ uint8_t gc_execute_line(char *line) {
     // the value must be positive. In inverse time mode, a positive value must be passed with each block.
     } else {
       // Check if feed rate is defined for the motion modes that require it.
-      if (gc_block.values.f == 0.0) { FAIL(STATUS_GCODE_UNDEFINED_FEED_RATE); } // [Feed rate undefined]
+      if ((int32_t)gc_block.values.f == 0) { FAIL(STATUS_GCODE_UNDEFINED_FEED_RATE); } // [Feed rate undefined]
 
       switch (gc_block.modal.motion) {
         case MOTION_MODE_LINEAR:
@@ -923,7 +923,7 @@ uint8_t gc_execute_line(char *line) {
   pl_data->feed_rate = gc_state.feed_rate; // Record data for planner use.
 
   // [4. Set spindle speed ]:
-  if ((gc_state.spindle_speed != gc_block.values.s) || bit_istrue(gc_parser_flags,GC_PARSER_LASER_FORCE_SYNC)) {
+  if (((int32_t)gc_state.spindle_speed != (int32_t)gc_block.values.s) || bit_istrue(gc_parser_flags,GC_PARSER_LASER_FORCE_SYNC)) {
     if (gc_state.modal.spindle != SPINDLE_DISABLE) {
       #ifdef VARIABLE_SPINDLE
         if (bit_isfalse(gc_parser_flags,GC_PARSER_LASER_ISMOTION)) {
@@ -995,7 +995,7 @@ uint8_t gc_execute_line(char *line) {
     if (gc_state.modal.tool_length == TOOL_LENGTH_OFFSET_CANCEL) { // G49
       gc_block.values.xyz[TOOL_LENGTH_OFFSET_AXIS] = 0.0;
     } // else G43.1
-    if ( gc_state.tool_length_offset != gc_block.values.xyz[TOOL_LENGTH_OFFSET_AXIS] ) {
+    if ( (int32_t)gc_state.tool_length_offset != (int32_t)gc_block.values.xyz[TOOL_LENGTH_OFFSET_AXIS] ) {
       gc_state.tool_length_offset = gc_block.values.xyz[TOOL_LENGTH_OFFSET_AXIS];
       system_flag_wco_change();
     }

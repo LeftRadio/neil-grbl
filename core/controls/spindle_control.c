@@ -159,7 +159,7 @@ uint8_t spindle_compute_pwm_value(float rpm) {
       }
       else if (rpm <= settings.rpm_min) {
           /* S0 disables spindle */
-          if (rpm == 0.0) {
+          if ((int32_t)rpm == 0) {
               sys.spindle_speed = 0.0;
               pwm_value = SPINDLE_PWM_OFF_VALUE;
           }

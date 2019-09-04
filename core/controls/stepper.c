@@ -401,7 +401,7 @@ void stepper_prep_buffer(void) {
 						prep.decelerate_after = inv_2_accel*(nominal_speed_sqr-exit_speed_sqr);
 						if (prep.decelerate_after < intersect_distance) { // Trapezoid type
 							prep.maximum_speed = nominal_speed;
-							if (st_blocks.pl_block->entry_speed_sqr == nominal_speed_sqr) {
+							if ( (int32_t)st_blocks.pl_block->entry_speed_sqr == (int32_t)nominal_speed_sqr) {
 								// Cruise-deceleration or cruise-only type.
 								prep.ramp_type = RAMP_CRUISE;
 							}
@@ -486,7 +486,7 @@ void stepper_prep_buffer(void) {
             // Acceleration-cruise, acceleration-deceleration ramp junction, or end of block.
             mm_remaining = prep.accelerate_until; // NOTE: 0.0 at EOB
             time_var = 2.0*(st_blocks.pl_block->millimeters-mm_remaining)/(prep.current_speed+prep.maximum_speed);
-            if (mm_remaining == prep.decelerate_after) { prep.ramp_type = RAMP_DECEL; }
+            if ( (int32_t)mm_remaining == (int32_t)prep.decelerate_after ) { prep.ramp_type = RAMP_DECEL; }
             else { prep.ramp_type = RAMP_CRUISE; }
             prep.current_speed = prep.maximum_speed;
           } else { // Acceleration only.
@@ -644,7 +644,7 @@ void stepper_prep_buffer(void) {
     prep.dt_remainder = (n_steps_remaining - step_dist_remaining)*inv_rate;
 
     // Check for exit conditions and flag to load next planner block.
-    if (mm_remaining == prep.mm_complete) {
+    if ( (int32_t)mm_remaining == (int32_t)prep.mm_complete ) {
       // End of planner block or forced-termination. No more distance to be executed.
       if (mm_remaining > 0.0) { // At end of forced-termination.
         // Reset prep parameters for resuming and then bail. Allow the stepper ISR to complete

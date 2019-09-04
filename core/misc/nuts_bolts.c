@@ -85,7 +85,7 @@ uint8_t read_float(char *line, uint8_t *char_counter, float *float_ptr) {
     fval = (float)intval;
     /* apply decimal, should perform no more than two floating point multiplications
        for the expected range of E0 to E-4 */
-    if (fval != 0) {
+    if ((int32_t)fval != 0) {
         while (exp <= -2) {
             fval *= 0.01;
             exp += 2;
@@ -130,7 +130,7 @@ float convert_delta_vector_to_unit_vector(float *vector) {
     uint8_t i;
     float magnitude = 0.0;
     for (i = 0; i < N_AXIS; i++) {
-        if (vector[i] != 0.0) {
+        if ((int32_t)vector[i] != 0) {
             magnitude += vector[i]*vector[i];
         }
     }
@@ -150,7 +150,7 @@ float convert_delta_vector_to_unit_vector(float *vector) {
 float limit_value_by_axis_maximum(float *max_value, float *unit_vec) {
     float limit_value = SOME_LARGE_VALUE;
     for (uint8_t i = 0; i < N_AXIS; i++) {
-        if (unit_vec[i] != 0) {
+        if ((int32_t)unit_vec[i] != 0) {
             limit_value = min( limit_value, fabs(max_value[i] / unit_vec[i]) );
         }
     }
