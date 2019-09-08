@@ -74,6 +74,7 @@ __weak void ngrbl_hal_probe_init(void) { /* */ }
 __weak uint8_t ngrbl_hal_probe_get_state(void) { return 0; }
 
 /* EEPROM --------------------------------------------------------------------*/
+__weak void ngrbl_hal_eeprom_init(void) { /* */ }
 __weak uint8_t ngrbl_hal_eeprom_read_byte(uint16_t addr) { return 0; }
 __weak void ngrbl_hal_eeprom_write_byte(uint16_t addr, uint8_t new_value) { /* */ }
 

@@ -20,6 +20,7 @@
 /* Exported typedef ----------------------------------------------------------*/
 /* Exported variables --------------------------------------------------------*/
 /* Exported function ---------------------------------------------------------*/
+extern void eeprom_init(void);
 extern uint8_t eeprom_get_char(uint16_t addr);
 extern void eeprom_put_char(uint16_t addr, uint8_t new_value);
 extern void memcpy_to_eeprom_with_checksum(unsigned int destination, char *source, unsigned int size);

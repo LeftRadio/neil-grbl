@@ -92,6 +92,8 @@ static uint8_t read_global_settings(void) {
   * @retval uint8_t
   */
 void settings_init(void) {
+    /* init eeprom implementation */
+    eeprom_init();
     /* */
     if( !read_global_settings() ) {
         report_status_message(STATUS_SETTING_READ_FAIL);

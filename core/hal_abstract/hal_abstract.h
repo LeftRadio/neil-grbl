@@ -53,12 +53,6 @@ typedef enum {
 void ngrbl_hal_critical_enter(void);
 void ngrbl_hal_critical_exit(void);
 
-
-/* INTERRUPT SECTION ---------------------------------------------------------*/
-void ngrbl_hal_enable_interrupts(void);
-void ngrbl_hal_disable_interrupts(void);
-
-
 /* STEPPER -------------------------------------------------------------------*/
 void ngrbl_hal_stepper_init(void);
 void ngrbl_hal_stepper_set_driver_state(ngrbl_hal_state_t state);
@@ -77,8 +71,10 @@ void ngrbl_hal_stepper_timer_pulse_set_compare(uint32_t val);
 void ngrbl_hal_stepper_timer_pulse_irq_start(void);
 /* HAL callbacks */
 extern void ngrbl_stepper_timer_base_irq_callback(void);
-extern void ngrbl_stepper_timer_reset_irq_callback(void);
-
+extern void ngrbl_stepper_timer_pulse_irq_callback(void);
+#ifdef STEP_PULSE_DELAY
+extern void ngrbl_stepper_timer_pulse_step_delay_irq_callback(void);
+#endif /* STEP_PULSE_DELAY */
 
 /* SPINDLE -------------------------------------------------------------------*/
 void ngrbl_hal_spindle_init(ngrbl_hal_spindle_mode_t pwm_mode);
@@ -87,13 +83,11 @@ void ngrbl_hal_spindle_start(void);
 void ngrbl_hal_spindle_stop(void);
 void ngrbl_hal_spindle_set_pwm(uint8_t val);
 
-
 /* COOLANT -------------------------------------------------------------------*/
 void ngrbl_hal_coolant_init(void);
 void ngrbl_hal_coolant_start(ngrbl_hal_coolant_flood_mist_t flood_mist);
 void ngrbl_hal_coolant_stop(ngrbl_hal_coolant_flood_mist_t flood_mist);
 ngrbl_hal_state_t ngrbl_hal_coolant_get_state(ngrbl_hal_coolant_flood_mist_t flood_mist);
-
 
 /* SYS CONTROL ---------------------------------------------------------------*/
 void ngrbl_hal_sys_control_init(void);
@@ -109,16 +103,14 @@ void ngrbl_hal_limits_disable(void);
 /* HAL callbacks */
 extern void ngrbl_limits_state_change_callback(uint8_t state);
 
-
 /* PROBES --------------------------------------------------------------------*/
 void ngrbl_hal_probe_init(void);
 uint8_t ngrbl_hal_probe_get_state(void);
 
-
 /* EEPROM --------------------------------------------------------------------*/
+void ngrbl_hal_eeprom_init(void);
 uint8_t ngrbl_hal_eeprom_read_byte(uint16_t addr);
 void ngrbl_hal_eeprom_write_byte(uint16_t addr, uint8_t new_value);
-
 
 /* SERIAL --------------------------------------------------------------------*/
 void ngrbl_hal_serail_init(uint32_t baudrate);
@@ -126,8 +118,7 @@ void ngrbl_hal_serial_write_byte(uint8_t data);
 void ngrbl_hal_serail_stop_tx(void);
 
 extern void ngrbl_hal_serial_tx_callback(void);
-extern void ngrbl_hal_serial_rx_callback(uint8_t* data, uint8_t length);
-
+extern void ngrbl_hal_serial_rx_callback(uint8_t* data, uint16_t length);
 
 /* UTILS ---------------------------------------------------------------------*/
 void ngrbl_hal_delay_ms(uint16_t val);
