@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    grbl.h
+  * @file    ngrbl.h
   * @author
   * @version 1.0.0
   * @date
@@ -9,20 +9,22 @@
 **/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __GRBL__H
-#define __GRBL__H
+#ifndef __NGRBL__H
+#define __NGRBL__H
 
 /* Includes ------------------------------------------------------------------*/
 /* Exported define -----------------------------------------------------------*/
 
-/* grbl versioning system */
-#define GRBL_VERSION "1.1g"
-#define GRBL_VERSION_BUILD "20181112"
+/* ngrbl versioning system */
+#define FW_VERSION             "1.2n"
+#define FW_VERSION_BUILD       "20190909"
 
 /* Exported macro ------------------------------------------------------------*/
 /* Exported typedef ----------------------------------------------------------*/
 /* Exported variables --------------------------------------------------------*/
 /* Exported function ---------------------------------------------------------*/
+extern void ngrbl_init(void);
+extern void ngrbl_main_loop(void);
 
 
 #endif /* __GRBL__H */

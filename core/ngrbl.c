@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    grbl.c
+  * @file    ngrbl.c
   * @author
   * @version 1.0.0
   * @date
@@ -58,11 +58,11 @@ void ngrbl_init(void) {
       Initialize system upon power-up.
     */
 
-    ngrbl_hal_disable_interrupts();
+    ngrbl_hal_critical_enter();
 
     /* Setup serial baud rate and interrupts */
     serial_init();
-    /* Load Grbl settings from EEPROM */
+    /* Load ngrbl settings from EEPROM */
     settings_init();
     /* Configure stepper pins and interrupt timers */
     stepper_init();
@@ -71,11 +71,11 @@ void ngrbl_init(void) {
     /* Clear machine position. */
     memset(sys_position,0,sizeof(sys_position));
 
-    ngrbl_hal_enable_interrupts();
+    ngrbl_hal_critical_exit();
 
     /* Initialize system state. */
     #ifdef FORCE_INITIALIZATION_ALARM
-      /* Force Grbl into an ALARM state upon a power-cycle or hard reset. */
+      /* Force ngrbl into an ALARM state upon a power-cycle or hard reset. */
       sys.state = STATE_ALARM;
     #else
       sys.state = STATE_IDLE;
@@ -83,7 +83,7 @@ void ngrbl_init(void) {
 
     /*
       Check for power-up and set system alarm if homing is enabled to force homing cycle
-      by setting Grbl's alarm state. Alarm locks out all g-code commands, including the
+      by setting ngrbl's alarm state. Alarm locks out all g-code commands, including the
       startup scripts, but allows access to settings and internal commands. Only a homing
       cycle '$H' or kill alarm locks '$X' will disable the alarm.
       NOTE: The startup script will run after successful completion of the homing cycle, but
@@ -104,7 +104,7 @@ void ngrbl_init(void) {
   * @retval None
   */
 void ngrbl_main_loop(void) {
-    /* Grbl initialization loop upon power-up or a system abort. For the latter, all processes
+    /* ngrbl initialization loop upon power-up or a system abort. For the latter, all processes
        will return to this loop to be cleanly re-initialized. */
 
     /* Reset system variables. */
@@ -122,7 +122,7 @@ void ngrbl_main_loop(void) {
     sys_rt_exec_motion_override = 0;
     sys_rt_exec_accessory_override = 0;
 
-    /* Reset Grbl primary systems. */
+    /* Reset ngrbl primary systems. */
     serial_reset_read_buffer();
     gc_init(); // Set g-code parser to default state
     spindle_init();
@@ -139,7 +139,7 @@ void ngrbl_main_loop(void) {
     /* Print welcome message. Indicates an initialization has occured at power-up or with a reset. */
     report_init_message();
 
-    /* Start Grbl main loop. Processes program inputs and executes them. */
+    /* Start ngrbl main loop. Processes program inputs and executes them. */
     protocol_main_loop();
 }
 

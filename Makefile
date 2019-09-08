@@ -37,7 +37,7 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
-core/grbl.c \
+core/ngrbl.c \
 core/serial/print.c \
 core/serial/report.c \
 core/serial/serial.c \
