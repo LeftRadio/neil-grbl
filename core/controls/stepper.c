@@ -782,7 +782,7 @@ float stepper_get_realtime_rate(void) {
   * @param  None
   * @retval None
   */
-void grbl_stepper_timer_base_irq_callback(void) {
+void ngrbl_stepper_timer_base_irq_callback(void) {
     /* the busy-flag is used to avoid reentering this callback */
     if (stepper.busy) { return; }
 
@@ -918,7 +918,7 @@ void grbl_stepper_timer_base_irq_callback(void) {
   * @param  None
   * @retval None
   */
-void grbl_stepper_timer_pulse_irq_callback(void) {
+void ngrbl_stepper_timer_pulse_irq_callback(void) {
     /* reset step/dir pulse cycle */
     ngrbl_hal_stepper_set_step(STEP_MASK, (uint8_t)0);
 }
@@ -930,7 +930,7 @@ void grbl_stepper_timer_pulse_irq_callback(void) {
   * @param  None
   * @retval None
   */
-void grbl_stepper_timer_pulse_step_delay_irq_callback(void) {
+void ngrbl_stepper_timer_pulse_step_delay_irq_callback(void) {
     /* Begin step pulse */
     ngrbl_hal_stepper_set_step(STEP_MASK, stepper.step_delay_bits);
 }
