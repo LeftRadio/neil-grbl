@@ -9,6 +9,7 @@
 **/
 
 /* Includes ------------------------------------------------------------------*/
+#include <string.h>
 #include "settings.h"
 #include "serial.h"
 #include "print.h"
@@ -31,8 +32,8 @@
   * @retval None
   */
 void printString(const char *s) {
-    while (*s) {
-        serial_write(*s++);
+	while (*s != '\t') {
+        serial_write(*(s++));
     }
 }
 

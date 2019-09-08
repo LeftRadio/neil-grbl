@@ -16,7 +16,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <string.h>
-#include "grbl.h"
+#include "ngrbl.h"
 #include "report.h"
 #include "serial.h"
 #include "print.h"
@@ -37,10 +37,10 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 #define report_util_setting_prefix(n)     { serial_write('$'); print_uint8_base10(n); serial_write('='); }
-#define report_util_line_feed()           { printString("\r\n"); }
+#define report_util_line_feed()           { printString("\r\n\t"); }
 #define report_util_feedback_line_feed()  { serial_write(']'); report_util_line_feed(); }
-#define report_util_gcode_modes_G()       { printString(" G"); }
-#define report_util_gcode_modes_M()       { printString(" M"); }
+#define report_util_gcode_modes_G()       { printString(" G\t"); }
+#define report_util_gcode_modes_M()       { printString(" M\t"); }
 // #define report_util_comment_line_feed() { serial_write(')'); report_util_line_feed(); }
 
 /* Private variables ---------------------------------------------------------*/
@@ -101,11 +101,11 @@ void report_status_message(uint8_t status_code) {
     switch(status_code) {
 
       case STATUS_OK:
-          printString("ok\r\n");
+          printString("ok\r\n\t");
       break;
 
       default:
-        printString("error:");
+        printString("error:\t");
         print_uint8_base10(status_code);
         report_util_line_feed();
       break;
@@ -118,7 +118,7 @@ void report_status_message(uint8_t status_code) {
   * @retval None
   */
 void report_alarm_message(uint8_t alarm_code) {
-    printString("ALARM:");
+    printString("ALARM:\t");
     print_uint8_base10(alarm_code);
     report_util_line_feed();
     /* force delay to ensure message clears serial write buffer. */
@@ -135,30 +135,30 @@ void report_alarm_message(uint8_t alarm_code) {
   * @retval None
   */
 void report_feedback_message(uint8_t message_code) {
-  printString("[MSG:");
+  printString("[MSG:\t");
   switch(message_code) {
     case MESSAGE_CRITICAL_EVENT:
-      printString("Reset to continue"); break;
+      printString("Reset to continue\t"); break;
     case MESSAGE_ALARM_LOCK:
-      printString("'$H'|'$X' to unlock"); break;
+      printString("'$H'|'$X' to unlock\t"); break;
     case MESSAGE_ALARM_UNLOCK:
-      printString("Caution: Unlocked"); break;
+      printString("Caution: Unlocked\t"); break;
     case MESSAGE_ENABLED:
-      printString("Enabled"); break;
+      printString("Enabled\t"); break;
     case MESSAGE_DISABLED:
-      printString("Disabled"); break;
+      printString("Disabled\t"); break;
     case MESSAGE_SAFETY_DOOR_AJAR:
-      printString("Check Door"); break;
+      printString("Check Door\t"); break;
     case MESSAGE_CHECK_LIMITS:
-      printString("Check Limits"); break;
+      printString("Check Limits\t"); break;
     case MESSAGE_PROGRAM_END:
-      printString("Pgm End"); break;
+      printString("Pgm End\t"); break;
     case MESSAGE_RESTORE_DEFAULTS:
-      printString("Restoring defaults"); break;
+      printString("Restoring defaults\t"); break;
     case MESSAGE_SPINDLE_RESTORE:
-      printString("Restoring spindle"); break;
+      printString("Restoring spindle\t"); break;
     case MESSAGE_SLEEP_MODE:
-      printString("Sleeping"); break;
+      printString("Sleeping\t"); break;
   }
   report_util_feedback_line_feed();
 }
@@ -170,7 +170,7 @@ void report_feedback_message(uint8_t message_code) {
   */
 void report_init_message(void) {
     /* */
-    printString("\r\nGrbl " GRBL_VERSION " ['$' for help]\r\n");
+    printString("\r\nGrbl " FW_VERSION " ['$' for help]\r\n\t");
 }
 
 /**
@@ -180,7 +180,7 @@ void report_init_message(void) {
   */
 void report_grbl_help(void) {
     /* */
-    printString("[HLP:$$ $# $G $I $N $x=val $Nx=line $J=line $SLP $C $X $H ~ ! ? ctrl-x]\r\n");
+    printString("[HLP:$$ $# $G $I $N $x=val $Nx=line $J=line $SLP $C $X $H ~ ! ? ctrl-x]\r\n\t");
 }
 
 /**
@@ -242,7 +242,7 @@ void report_grbl_settings(void) {
   */
 void report_probe_parameters(void) {
     /* report in terms of machine position */
-    printString("[PRB:");
+    printString("[PRB:\t");
     float print_position[N_AXIS];
     system_convert_array_steps_to_mpos(print_position,sys_probe_position);
     report_util_axis_values(print_position);
@@ -264,20 +264,20 @@ void report_ngc_parameters(void) {
             report_status_message(STATUS_SETTING_READ_FAIL);
             return;
         }
-        printString("[G");
+        printString("[G\t");
         switch (coord_select) {
-            case 6: printString("28"); break;
-            case 7: printString("30"); break;
+            case 6: printString("28\t"); break;
+            case 7: printString("30\t"); break;
             default: print_uint8_base10(coord_select+54); break; // G54-G59
         }
         serial_write(':');
         report_util_axis_values(coord_data);
         report_util_feedback_line_feed();
     }
-    printString("[G92:"); // Print G92,G92.1 which are not persistent in memory
+    printString("[G92:\t"); // Print G92,G92.1 which are not persistent in memory
     report_util_axis_values(gc_state.coord_offset);
     report_util_feedback_line_feed();
-    printString("[TLO:"); // Print tool length offset value
+    printString("[TLO:\t"); // Print tool length offset value
     printFloat_CoordValue(gc_state.tool_length_offset);
     report_util_feedback_line_feed();
     report_probe_parameters(); // Print probe parameters. Not persistent in memory.
@@ -289,9 +289,9 @@ void report_ngc_parameters(void) {
   * @retval None
   */
 void report_gcode_modes(void) {
-    printString("[GC:G");
+    printString("[GC:G\t");
     if (gc_state.modal.motion >= MOTION_MODE_PROBE_TOWARD) {
-        printString("38.");
+        printString("38.\t");
         print_uint8_base10(gc_state.modal.motion - (MOTION_MODE_PROBE_TOWARD-2));
     }
     else {
@@ -355,14 +355,14 @@ void report_gcode_modes(void) {
       }
     #endif
 
-    printString(" T");
+    printString(" T\t");
     print_uint8_base10(gc_state.tool);
 
-    printString(" F");
+    printString(" F\t");
     printFloat_RateValue(gc_state.feed_rate);
 
     #ifdef VARIABLE_SPINDLE
-      printString(" S");
+      printString(" S\t");
       printFloat(gc_state.spindle_speed,N_DECIMAL_RPMVALUE);
     #endif
 
@@ -375,7 +375,7 @@ void report_gcode_modes(void) {
   * @retval None
   */
 void report_startup_line(uint8_t n, char *line) {
-    printString("$N");
+    printString("$N\t");
     print_uint8_base10(n);
     serial_write('=');
     printString(line);
@@ -400,10 +400,10 @@ void report_execute_startup_message(char *line, uint8_t status_code) {
   * @retval None
   */
 void report_build_info(char *line) {
-    printString("[VER:" GRBL_VERSION "." GRBL_VERSION_BUILD ":");
+    printString("[VER:" FW_VERSION "." FW_VERSION_BUILD ":\t");
     printString(line);
     report_util_feedback_line_feed();
-    printString("[OPT:"); // Generate compile-time build option list
+    printString("[OPT:\t"); // Generate compile-time build option list
     #ifdef VARIABLE_SPINDLE
       serial_write('V');
     #endif
@@ -484,7 +484,7 @@ void report_build_info(char *line) {
   * @retval None
   */
 void report_echo_line_received(char *line) {
-    printString("[echo: "); printString(line);
+    printString("[echo: \t"); printString(line);
     report_util_feedback_line_feed();
 }
 
@@ -507,21 +507,23 @@ void report_realtime_status(void) {
     // Report current machine state and sub-states
     serial_write('<');
     switch (sys.state) {
-      case STATE_IDLE: printString("Idle"); break;
-      case STATE_CYCLE: printString("Run"); break;
+      case STATE_IDLE:
+    	  printString("Idle\t");
+      break;
+      case STATE_CYCLE: printString("Run\t"); break;
       case STATE_HOLD:
         if (!(sys.suspend & SUSPEND_JOG_CANCEL)) {
-          printString("Hold:");
+          printString("Hold:\t");
           if (sys.suspend & SUSPEND_HOLD_COMPLETE) { serial_write('0'); } // Ready to resume
           else { serial_write('1'); } // Actively holding
           break;
         } // Continues to print jog state during jog cancel.
-      case STATE_JOG: printString("Jog"); break;
-      case STATE_HOMING: printString("Home"); break;
-      case STATE_ALARM: printString("Alarm"); break;
-      case STATE_CHECK_MODE: printString("Check"); break;
+      case STATE_JOG: printString("Jog\t"); break;
+      case STATE_HOMING: printString("Home\t"); break;
+      case STATE_ALARM: printString("Alarm\t"); break;
+      case STATE_CHECK_MODE: printString("Check\t"); break;
       case STATE_SAFETY_DOOR:
-        printString("Door:");
+        printString("Door:\t");
         if (sys.suspend & SUSPEND_INITIATE_RESTORE) {
           serial_write('3'); // Restoring
         } else {
@@ -536,7 +538,7 @@ void report_realtime_status(void) {
           }
         }
         break;
-      case STATE_SLEEP: printString("Sleep"); break;
+      case STATE_SLEEP: printString("Sleep\t"); break;
     }
 
     float wco[N_AXIS];
@@ -554,16 +556,16 @@ void report_realtime_status(void) {
 
     // Report machine position
     if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_POSITION_TYPE)) {
-      printString("|MPos:");
+      printString("|MPos:\t");
     } else {
-      printString("|WPos:");
+      printString("|WPos:\t");
     }
     report_util_axis_values(print_position);
 
     // Returns planner and serial read buffer states.
     #ifdef REPORT_FIELD_BUFFER_STATE
       if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_BUFFER_STATE)) {
-        printString("|Bf:");
+        printString("|Bf:\t");
         print_uint8_base10(plan_get_block_buffer_available());
         serial_write(',');
         print_uint8_base10(serial_get_rx_buffer_available());
@@ -577,7 +579,7 @@ void report_realtime_status(void) {
         if (cur_block != NULL) {
           uint32_t ln = cur_block->line_number;
           if (ln > 0) {
-            printString("|Ln:");
+            printString("|Ln:\t");
             printInteger(ln);
           }
         }
@@ -587,12 +589,12 @@ void report_realtime_status(void) {
     // Report realtime feed speed
     #ifdef REPORT_FIELD_CURRENT_FEED_SPEED
       #ifdef VARIABLE_SPINDLE
-        printString("|FS:");
+        printString("|FS:\t");
         printFloat_RateValue( stepper_get_realtime_rate() );
         serial_write(',');
         printFloat(sys.spindle_speed,N_DECIMAL_RPMVALUE);
       #else
-        printString("|F:");
+        printString("|F:\t");
         printFloat_RateValue( st_get_realtime_rate() );
       #endif
     #endif
@@ -602,7 +604,7 @@ void report_realtime_status(void) {
       uint8_t ctrl_pin_state = system_control_get_state();
       uint8_t prb_pin_state = probe_get_state();
       if (lim_pin_state | ctrl_pin_state | prb_pin_state) {
-        printString("|Pn:");
+        printString("|Pn:\t");
         if (prb_pin_state) { serial_write('P'); }
         if (lim_pin_state) {
           if (bit_istrue(lim_pin_state,bit(X_AXIS))) { serial_write('X'); }
@@ -627,7 +629,7 @@ void report_realtime_status(void) {
           sys.report_wco_counter = (REPORT_WCO_REFRESH_BUSY_COUNT-1); // Reset counter for slow refresh
         } else { sys.report_wco_counter = (REPORT_WCO_REFRESH_IDLE_COUNT-1); }
         if (sys.report_ovr_counter == 0) { sys.report_ovr_counter = 1; } // Set override on next report.
-        printString("|WCO:");
+        printString("|WCO:\t");
         report_util_axis_values(wco);
       }
     #endif
@@ -638,7 +640,7 @@ void report_realtime_status(void) {
         if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR)) {
           sys.report_ovr_counter = (REPORT_OVR_REFRESH_BUSY_COUNT-1); // Reset counter for slow refresh
         } else { sys.report_ovr_counter = (REPORT_OVR_REFRESH_IDLE_COUNT-1); }
-        printString("|Ov:");
+        printString("|Ov:\t");
         print_uint8_base10(sys.f_override);
         serial_write(',');
         print_uint8_base10(sys.r_override);
@@ -648,7 +650,7 @@ void report_realtime_status(void) {
         uint8_t sp_state = spindle_get_state();
         uint8_t cl_state = coolant_get_state();
         if (sp_state || cl_state) {
-          printString("|A:");
+          printString("|A:\t");
           if (sp_state) { // != SPINDLE_STATE_DISABLE
             #ifdef VARIABLE_SPINDLE
               #ifdef USE_SPINDLE_DIR_AS_ENABLE_PIN
