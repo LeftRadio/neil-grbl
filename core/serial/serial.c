@@ -17,18 +17,18 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+#ifndef RX_BUFFER_SIZE
+
+#endif
+
 #define RX_RING_BUFFER (RX_BUFFER_SIZE + 1)
-#define TX_RING_BUFFER (TX_BUFFER_SIZE + 1)
+// #define TX_RING_BUFFER (TX_BUFFER_SIZE + 1)
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 uint8_t serial_rx_buffer[RX_RING_BUFFER];
 uint8_t serial_rx_buffer_head = 0;
 volatile uint8_t serial_rx_buffer_tail = 0;
-
-uint8_t serial_tx_buffer[TX_RING_BUFFER];
-uint8_t serial_tx_buffer_head = 0;
-volatile uint8_t serial_tx_buffer_tail = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 /* Extern function -----------------------------------------------------------*/
@@ -49,36 +49,6 @@ uint8_t serial_get_rx_buffer_available(void) {
 }
 
 /**
-  * @brief  Returns the number of bytes used in the RX serial buffer.
-  *         NOTE: Deprecated. Not used unless classic status reports are enabled in config.h.
-  * @param  None
-  * @retval The number of bytes used in the RX serial buffer.
-  */
-uint8_t serial_get_rx_buffer_count(void) {
-    /* Copy to limit multiple calls to volatile */
-    uint8_t rtail = serial_rx_buffer_tail;
-    if (serial_rx_buffer_head >= rtail) {
-        return (serial_rx_buffer_head - rtail);
-    }
-    return (RX_BUFFER_SIZE - (rtail - serial_rx_buffer_head));
-}
-
-/**
-  * @brief  Returns the number of bytes used in the TX serial buffer.
-  *         NOTE: Not used except for debugging and ensuring no TX bottlenecks.
-  * @param  None
-  * @retval The number of bytes used in the TX serial buffer.
-  */
-uint8_t serial_get_tx_buffer_count(void) {
-    /* Copy to limit multiple calls to volatile */
-    uint8_t ttail = serial_tx_buffer_tail;
-    if (serial_tx_buffer_head >= ttail) {
-        return (serial_tx_buffer_head - ttail);
-    }
-    return (TX_RING_BUFFER - (ttail - serial_tx_buffer_head));
-}
-
-/**
   * @brief  serial_init
   * @param  None
   * @retval None
@@ -93,26 +63,7 @@ void serial_init(void) {
   * @retval None
   */
 void serial_write(uint8_t data) {
-    /* Calculate next head */
-    uint8_t next_head = serial_tx_buffer_head + 1;
-    if (next_head == TX_RING_BUFFER) { next_head = 0; }
-
-    /* wait until there is space in the buffer */
-    while (next_head == serial_tx_buffer_tail) {
-      // TODO: Restructure st_prep_buffer() calls to be executed here during a long print.
-      if (sys_rt_exec_state & EXEC_RESET) { return; } // Only check for abort to avoid an endless loop.
-    }
-
-    /* store data and advance head */
-    serial_tx_buffer[serial_tx_buffer_head] = data;
-    serial_tx_buffer_head = next_head;
-
-    ngrbl_hal_serial_write_byte(serial_tx_buffer[serial_tx_buffer_tail]);
-
-     /* Update tail position */
-    if (++serial_tx_buffer_tail == TX_RING_BUFFER) {
-        serial_tx_buffer_tail = 0;
-    }
+    ngrbl_hal_serial_write_byte(data);
 }
 
 /**
@@ -150,25 +101,6 @@ void serial_reset_read_buffer(void) {
 
 
 /* RX/TX callback function ---------------------------------------------------*/
-
-/**
-  * @brief  ngrbl_hal_serial_tx_callback
-  * @param  None
-  * @retval None
-  */
-void ngrbl_hal_serial_tx_callback(void) {
-    /* Update tail position */
-    if (++serial_tx_buffer_tail == TX_RING_BUFFER) {
-        serial_tx_buffer_tail = 0;
-    }
-    /* Stop tx-streaming if this concludes the transfer */
-    if (serial_tx_buffer_tail == serial_tx_buffer_head) {
-        ngrbl_hal_serail_stop_tx();
-    }
-    else {
-        ngrbl_hal_serial_write_byte(serial_tx_buffer[serial_tx_buffer_tail]);
-    }
-}
 
 /**
   * @brief  _store_handle_data_in
