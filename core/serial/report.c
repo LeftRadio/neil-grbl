@@ -79,7 +79,7 @@ static void report_util_uint8_setting(uint8_t n, int val) {
   */
 static void report_util_float_setting(uint8_t n, float val, uint8_t n_decimal) {
     report_util_setting_prefix(n);
-    printFloat(val,n_decimal);
+    printFloat(val, n_decimal);
     report_util_line_feed();
 }
 
@@ -498,13 +498,14 @@ void report_echo_line_received(char *line) {
   * @retval None
   */
 void report_realtime_status(void) {
-    uint8_t idx;
-    int32_t current_position[N_AXIS]; // Copy current state of the system position variable
-    memcpy(current_position,sys_position,sizeof(sys_position));
+    /* copy current state of the system position variable */
+    int32_t current_position[N_AXIS];
+    memcpy(current_position, sys_position, sizeof(sys_position));
+    /* */
     float print_position[N_AXIS];
     system_convert_array_steps_to_mpos(print_position,current_position);
 
-    // Report current machine state and sub-states
+    /* report current machine state and sub-states */
     serial_write('<');
     switch (sys.state) {
       case STATE_IDLE:
@@ -542,16 +543,19 @@ void report_realtime_status(void) {
     }
 
     float wco[N_AXIS];
-    if (bit_isfalse(settings.status_report_mask,BITFLAG_RT_STATUS_POSITION_TYPE) ||
-        (sys.report_wco_counter == 0) ) {
-      for (idx=0; idx< N_AXIS; idx++) {
-        // Apply work coordinate offsets and tool length offset to current position.
-        wco[idx] = gc_state.coord_system[idx]+gc_state.coord_offset[idx];
-        if (idx == TOOL_LENGTH_OFFSET_AXIS) { wco[idx] += gc_state.tool_length_offset; }
-        if (bit_isfalse(settings.status_report_mask,BITFLAG_RT_STATUS_POSITION_TYPE)) {
-          print_position[idx] -= wco[idx];
+    if (bit_isfalse(settings.status_report_mask, BITFLAG_RT_STATUS_POSITION_TYPE) || (sys.report_wco_counter == 0) ) {
+        /* */
+        for (uint8_t idx = 0; idx < N_AXIS; idx++) {
+            /* apply work coordinate offsets and tool length offset to current position */
+            wco[idx] = gc_state.coord_system[idx] + gc_state.coord_offset[idx];
+            /* */
+            if (idx == TOOL_LENGTH_OFFSET_AXIS) {
+                wco[idx] += gc_state.tool_length_offset;
+            }
+            if (bit_isfalse(settings.status_report_mask,BITFLAG_RT_STATUS_POSITION_TYPE)) {
+                print_position[idx] -= wco[idx];
+            }
         }
-      }
     }
 
     // Report machine position
